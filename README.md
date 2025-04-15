@@ -1,4 +1,4 @@
-# DORM - Unlimited SQLite DBs Directly In Your Worker
+# 🛏️ DORM - Unlimited SQLite DBs Directly In Your Worker
 
 Durable Object Relational Mapping, Functionality
 

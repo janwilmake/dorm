@@ -8,7 +8,7 @@
   },
   "route": {
     "custom_domain": true,
-    "pattern": "ormdo.wilmake.com"
+    "pattern": "dorm.wilmake.com"
   },
   "durable_objects": {
     "bindings": [
