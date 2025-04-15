@@ -1,11 +1,15 @@
 {
   "name": "dormroom",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "files": [
     "DORM.ts",
     "jsonSchemaToSql.ts"
   ],
+  "types": "types.d.ts",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250415.0"
+  },
+  "scripts": {
+    "types": "tsc DORM.ts --declaration --emitDeclarationOnly --outFile types.d.ts"
   }
 }
