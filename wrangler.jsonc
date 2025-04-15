@@ -1,6 +1,7 @@
 {
-  "name": "orm-do",
+  "name": "dorm",
   "main": "example.ts",
+  "assets": { "directory": "./public" },
   "compatibility_date": "2024-04-15",
   "dev": {
     "port": 3000
@@ -13,14 +14,14 @@
     "bindings": [
       {
         "name": "MY_EXAMPLE_DO",
-        "class_name": "ORMDO"
+        "class_name": "DORM"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["ORMDO"]
+      "new_sqlite_classes": ["DORM"]
     }
   ]
 }

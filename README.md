@@ -1,6 +1,6 @@
-# ORM DO - Unlimited SQLite DBs Directly In Your Worker
+# DORM - Unlimited SQLite DBs Directly In Your Worker
 
-Functionality
+Durable Object Relational Mapping, Functionality
 
 - 🔥 Abstracts away from the DO so you can just perform SQL queries to state from unlimited SQLite DBs, directly from your workers.
 - 🔥 Compatible and linked with @outerbase to easily explore the state of the DO or DOs

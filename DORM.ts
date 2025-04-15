@@ -1,17 +1,26 @@
 /// <reference types="@cloudflare/workers-types" />
 //@ts-check
 
-// Basic configuration for the factory
+import { jsonSchemaToSql, TableSchema } from "./jsonSchemaToSql";
+
+/**
+ * DB Config
+ *
+ * - Put a version to prefix your DO names. this won't delete previous versions, but they will not be accessible anymore through this ORM
+ * - either use schemas, statements, or both to define your tables.
+ * - put a secret to make the database accessible only with this authorization header
+ */
 export interface DBConfig {
-  version?: string; // Version prefix for DO naming
-  schema: string | string[]; // SQL statements to initialize schema
-  authSecret?: string; // Optional secret for authenticating requests
+  version?: string;
+  schemas?: TableSchema[];
+  statements?: string | string[];
+  authSecret?: string;
 }
 
 // Middleware options
 export interface MiddlewareOptions {
-  secret?: string; // Secret for request authentication
-  prefix?: string; // URL path prefix for API endpoints
+  secret?: string;
+  prefix?: string;
 }
 
 // Query options for individual queries
@@ -59,7 +68,12 @@ function getCorsHeaders() {
   };
 }
 
-// The main factory function that creates a query function and middleware
+/**
+ * factory function that returns:
+ * - the query function for raw queries
+ * - the middleware to perform raw queries over api
+ * - (TODO) - orm functionality
+ */
 export function createDBClient<T extends DBConfig>(
   doNamespace: DurableObjectNamespace,
   config: T,
@@ -71,14 +85,27 @@ export function createDBClient<T extends DBConfig>(
   let initialized = false;
 
   // Convert schema to array if it's a string
-  const schemaStatements = Array.isArray(config.schema)
-    ? config.schema
-    : [config.schema];
+  const statementsSql = Array.isArray(config.statements)
+    ? config.statements
+    : config.statements
+    ? [config.statements]
+    : [];
+
+  const schemaSql =
+    config.schemas
+      ?.map((schema) => {
+        const { createTableStatement, indexStatements } =
+          jsonSchemaToSql(schema);
+        return [createTableStatement, ...indexStatements];
+      })
+      .flat() || [];
+
+  const schema = statementsSql.concat(schemaSql);
 
   // The query function returned by the factory
   async function query<O extends QueryOptions>(
-    options: O,
     sql: string,
+    options?: O,
     ...params: any[]
   ): Promise<QueryResult<QueryResponseType<O>>> {
     try {
@@ -89,9 +116,7 @@ export function createDBClient<T extends DBConfig>(
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            schema: schemaStatements,
-          }),
+          body: JSON.stringify({ schema }),
         });
 
         if (!initResponse.ok) {
@@ -106,18 +131,18 @@ export function createDBClient<T extends DBConfig>(
       }
 
       // Format the request based on whether we want a transaction or a single query
-      const body = options.isTransaction
+      const body = options?.isTransaction
         ? JSON.stringify({
             transaction: [{ sql, params }],
           })
         : JSON.stringify({
             sql,
             params,
-            isRaw: options.isRaw,
+            isRaw: options?.isRaw,
           });
 
       // Determine the appropriate endpoint based on format
-      const endpoint = options.isRaw ? "/query/raw" : "/query";
+      const endpoint = options?.isRaw ? "/query/raw" : "/query";
 
       const response = await obj.fetch(`https://dummy-url${endpoint}`, {
         method: "POST",
@@ -137,9 +162,8 @@ export function createDBClient<T extends DBConfig>(
 
       const responseData: any = await response.json();
 
-      // If using browsable's raw format, the result should be in responseData.result
       const result =
-        options.isRaw && responseData.result
+        options?.isRaw && responseData.result
           ? responseData.result
           : responseData;
 
@@ -156,42 +180,6 @@ export function createDBClient<T extends DBConfig>(
         ok: false,
       };
     }
-  }
-
-  // Convenience wrapper for standard queries
-  async function standardQuery<T = Record<string, any>>(
-    sql: string,
-    ...params: any[]
-  ): Promise<QueryResult<ArrayQueryResult<T>>> {
-    return query(
-      { isRaw: false, isTransaction: false },
-      sql,
-      ...params,
-    ) as Promise<QueryResult<ArrayQueryResult<T>>>;
-  }
-
-  // Convenience wrapper for raw queries
-  async function rawQuery(
-    sql: string,
-    ...params: any[]
-  ): Promise<QueryResult<RawQueryResult>> {
-    return query(
-      { isRaw: true, isTransaction: false },
-      sql,
-      ...params,
-    ) as Promise<QueryResult<RawQueryResult>>;
-  }
-
-  // Convenience wrapper for transaction queries
-  async function transactionQuery<T = Record<string, any>>(
-    sql: string,
-    ...params: any[]
-  ): Promise<QueryResult<ArrayQueryResult<T>>> {
-    return query(
-      { isRaw: false, isTransaction: true },
-      sql,
-      ...params,
-    ) as Promise<QueryResult<ArrayQueryResult<T>>>;
   }
 
   // Middleware function to handle HTTP requests
@@ -243,9 +231,7 @@ export function createDBClient<T extends DBConfig>(
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            schema: schemaStatements,
-          }),
+          body: JSON.stringify({ schema }),
         });
 
         if (!initResponse.ok) {
@@ -284,8 +270,8 @@ export function createDBClient<T extends DBConfig>(
             isTransaction: true,
           };
           const result = await query(
-            queryOptions,
             data.transaction[0].sql,
+            queryOptions,
             ...(data.transaction[0].params || []),
           );
 
@@ -303,8 +289,8 @@ export function createDBClient<T extends DBConfig>(
             isTransaction: false,
           };
           const result = await query(
-            queryOptions,
             data.sql,
+            queryOptions,
             ...(data.params || []),
           );
 
@@ -353,8 +339,8 @@ export function createDBClient<T extends DBConfig>(
         };
 
         const result = await query(
-          queryOptions,
           data.sql,
+          queryOptions,
           ...(data.params || []),
         );
 
@@ -388,39 +374,12 @@ export function createDBClient<T extends DBConfig>(
 
   return {
     query,
-    standardQuery,
-    rawQuery,
-    transactionQuery,
     middleware,
   };
 }
 
-export type DBClient = {
-  query: <O extends QueryOptions>(
-    options: O,
-    sql: string,
-    ...params: any[]
-  ) => Promise<QueryResult<QueryResponseType<O>>>;
-  standardQuery: <T = Record<string, any>>(
-    sql: string,
-    ...params: any[]
-  ) => Promise<QueryResult<ArrayQueryResult<T>>>;
-  rawQuery: (
-    sql: string,
-    ...params: any[]
-  ) => Promise<QueryResult<RawQueryResult>>;
-  transactionQuery: <T = Record<string, any>>(
-    sql: string,
-    ...params: any[]
-  ) => Promise<QueryResult<ArrayQueryResult<T>>>;
-  middleware: (
-    request: Request,
-    options?: MiddlewareOptions,
-  ) => Promise<Response | undefined>;
-};
-
 // Durable Object implementation with Browsable compatibility
-export class ORMDO {
+export class DORM {
   private state: DurableObjectState;
   public sql: SqlStorage; // Public for Browsable compatibility
   private initialized: boolean = false;
