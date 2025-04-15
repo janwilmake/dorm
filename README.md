@@ -10,6 +10,10 @@ Functionality
 
 See https://ormdo.wilmake.com for the `example.ts` example, which demonstrates it works using a users management API and HTML for that.
 
+# Contribute
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/orm-do)
+
 # Usage
 
 In your `wrangler.toml`
