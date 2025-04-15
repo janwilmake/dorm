@@ -23,6 +23,7 @@ export interface JSONSchema {
   minLength?: number;
   maxLength?: number;
   pattern?: string;
+  description?: string;
 }
 
 export interface TableSchema {
