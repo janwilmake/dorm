@@ -2,6 +2,7 @@ import { DORM, createClient, DBConfig } from "./DORM";
 export { DORM };
 
 const dbConfig: DBConfig = {
+  // either use sql statements
   statements: [
     `
     CREATE TABLE IF NOT EXISTS users (
@@ -12,6 +13,7 @@ const dbConfig: DBConfig = {
     )
     `,
   ],
+  // or use json schemas to define your tables!
   schemas: [
     {
       $id: "items",

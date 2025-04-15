@@ -11,88 +11,19 @@ Durable Object Relational Mapping, Functionality
 - 🔥 allow creating tables from JSON-Schemas
 - 🔥 adds simple ORM functionality: create, update, remove, select
 
-# Demo
+# Usage & Demo
 
-See https://dorm.wilmake.com for the `example.ts` example, which demonstrates it works using a users management API and HTML for that.
+Installation is a snooze:
 
-X Post: https://x.com/janwilmake/status/1912146275597721959
+```
+npm i dormroom
+```
 
-# Contribute
+See [example.ts](example.ts) and [wrangler.jsonc](wrangler.jsonc) how to use!
 
-(still testing this button! lmk if it worked)
+See https://dorm.wilmake.com to see that live. This demonstrates it works using a users management API and HTML for that. X Post: https://x.com/janwilmake/status/1912146275597721959
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/orm-do)
-
-# Installation
-
-`npm i dormroom`
-
-# Usage
-
-In your `wrangler.toml`
-
-```toml
-[[durable_objects.bindings]]
-name = "MY_EXAMPLE_DO"
-class_name = "DORM"
-
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["DORM"]
-```
-
-In your worker:
-
-```ts
-import { DORM, createDBClient, DBConfig, DBClient } from "dormroom/DORM";
-import { adminHtml } from "./adminHtml";
-export { DORM };
-
-const dbConfig: DBConfig = {
-  /** Put your CREATE TABLE queries here */
-  schema: [
-    `
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    `,
-  ],
-  /** Updating this if you have breaking schema changes. */
-  version: "v1",
-  // Optional: used for authenticating requests
-  authSecret: "my-secret-key",
-};
-
-type Env = {
-  MY_EXAMPLE_DO: DurableObjectNamespace;
-};
-
-export default {
-  fetch: async (request: Request, env: Env, ctx: any) => {
-    const client = createDBClient(env.MY_EXAMPLE_DO, dbConfig);
-
-    // First try to handle the request with the middleware
-    const middlewareResponse = await client.middleware(request, {
-      prefix: "/api/db",
-      secret: dbConfig.authSecret,
-    });
-
-    // If middleware handled the request, return its response
-    if (middlewareResponse) {
-      return middlewareResponse;
-    }
-
-    // Get URL and method for routing
-    const url = new URL(request.url);
-    const method = request.method;
-
-    ///... YOUR ENDPOINTS HERE USING DB CLIENT
-  },
-};
-```
 
 # Why?
 
