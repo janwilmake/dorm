@@ -6,6 +6,10 @@ Functionality
 - 🔥 Compatible and linked with outerbase to easily explore the state of the DO or DOs
 - 🔥 Does not support streaming or cursors, always responds Promises immediate from the query. This makes working with it a lot simpler.
 
+# Demo
+
+See https://ormdo.wilmake.com for the `example.ts` example, which demonstrates it works using a users management API and HTML for that.
+
 # Usage
 
 In your `wrangler.toml`
