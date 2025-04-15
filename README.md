@@ -10,6 +10,8 @@ Functionality
 
 See https://ormdo.wilmake.com for the `example.ts` example, which demonstrates it works using a users management API and HTML for that.
 
+X Post: https://x.com/janwilmake/status/1912146275597721959
+
 # Contribute
 
 (still testing this button! lmk if it worked)
