@@ -1,21 +1,5 @@
-import { DORM, createDBClient, DBConfig } from "./DORM";
-import { TableSchema } from "./jsonSchemaToSql";
+import { DORM, createClient, DBConfig } from "./DORM";
 export { DORM };
-
-const items: TableSchema = {
-  $id: "items",
-  type: "object",
-  required: ["id"],
-  properties: {
-    id: {
-      type: "string",
-      "x-dorm-auto-increment": true,
-      "x-dorm-primary-key": true,
-      "x-dorm-unique": true,
-    },
-    description: { type: "string" },
-  },
-};
 
 const dbConfig: DBConfig = {
   statements: [
@@ -28,7 +12,22 @@ const dbConfig: DBConfig = {
     )
     `,
   ],
-  schemas: [items],
+  schemas: [
+    {
+      $id: "items",
+      type: "object",
+      required: ["id"],
+      properties: {
+        id: {
+          type: "string",
+          "x-dorm-auto-increment": true,
+          "x-dorm-primary-key": true,
+          "x-dorm-unique": true,
+        },
+        description: { type: "string" },
+      },
+    },
+  ],
   version: "v1",
   authSecret: "my-secret-key",
 };
@@ -39,7 +38,7 @@ type Env = {
 
 export default {
   fetch: async (request: Request, env: Env, ctx: any) => {
-    const client = createDBClient(env.MY_EXAMPLE_DO, dbConfig);
+    const client = createClient(env.MY_EXAMPLE_DO, dbConfig);
     const url = new URL(request.url);
     const method = request.method;
 
@@ -62,9 +61,9 @@ export default {
       if (method === "GET") {
         // Get all users
         if (url.pathname === "/api/users") {
-          const result = await client.query(
-            "SELECT * FROM users ORDER BY created_at DESC",
-          );
+          const result = await client.select("users", undefined, {
+            orderBy: [{ column: "created_at", direction: "DESC" }],
+          });
 
           if (!result.ok) {
             return new Response(

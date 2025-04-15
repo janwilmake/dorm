@@ -74,7 +74,13 @@ function getCorsHeaders() {
  * - the middleware to perform raw queries over api
  * - (TODO) - orm functionality
  */
-export function createDBClient<T extends DBConfig>(
+/**
+ * factory function that returns:
+ * - the query function for raw queries
+ * - basic ORM operations (select, insert, update, remove)
+ * - the middleware to perform raw queries over api
+ */
+export function createClient<T extends DBConfig>(
   doNamespace: DurableObjectNamespace,
   config: T,
   name?: string,
@@ -180,6 +186,211 @@ export function createDBClient<T extends DBConfig>(
         ok: false,
       };
     }
+  }
+
+  // ORM Methods
+
+  /**
+   * Select records from a table
+   * @param tableName The name of the table
+   * @param where Optional where conditions as an object
+   * @param options Optional select options (limit, offset, orderBy)
+   */
+  async function select(
+    tableName: string,
+    where: Record<string, any> = {},
+    options: {
+      limit?: number;
+      offset?: number;
+      orderBy?: string | { column: string; direction?: "ASC" | "DESC" }[];
+    } = {},
+  ) {
+    // Build the query
+    let sql = `SELECT * FROM "${tableName}"`;
+    const params: any[] = [];
+
+    // Add WHERE conditions
+    const whereKeys = Object.keys(where);
+    if (whereKeys.length > 0) {
+      sql += " WHERE ";
+      sql += whereKeys
+        .map((key) => {
+          params.push(where[key]);
+          return `"${key}" = ?`;
+        })
+        .join(" AND ");
+    }
+
+    // Add ORDER BY
+    if (options.orderBy) {
+      if (typeof options.orderBy === "string") {
+        sql += ` ORDER BY "${options.orderBy}"`;
+      } else if (Array.isArray(options.orderBy) && options.orderBy.length > 0) {
+        sql +=
+          " ORDER BY " +
+          options.orderBy
+            .map((item) => {
+              if (typeof item === "string") {
+                return `"${item}"`;
+              } else {
+                return `"${item.column}" ${item.direction || "ASC"}`;
+              }
+            })
+            .join(", ");
+      }
+    }
+
+    // Add LIMIT and OFFSET
+    if (options.limit !== undefined) {
+      sql += ` LIMIT ${options.limit}`;
+
+      if (options.offset !== undefined) {
+        sql += ` OFFSET ${options.offset}`;
+      }
+    }
+
+    // Execute the query
+    return query(sql, undefined, ...params);
+  }
+
+  /**
+   * Insert a record into a table
+   * @param tableName The name of the table
+   * @param data The data to insert
+   * @param returnRecord Whether to return the inserted record
+   */
+  async function insert(
+    tableName: string,
+    data: Record<string, any>,
+    returnRecord: boolean = true,
+  ) {
+    const columns = Object.keys(data);
+    const values = Object.values(data);
+
+    if (columns.length === 0) {
+      return {
+        json: null,
+        status: 400,
+        ok: false,
+      };
+    }
+
+    // Build the query
+    const placeholders = new Array(columns.length).fill("?").join(", ");
+    let sql = `INSERT INTO "${tableName}" ("${columns.join(
+      '", "',
+    )}") VALUES (${placeholders})`;
+
+    // Add RETURNING * if requested
+    if (returnRecord) {
+      sql += " RETURNING *";
+    }
+
+    // Execute the query
+    return query(sql, undefined, ...values);
+  }
+
+  /**
+   * Update records in a table
+   * @param tableName The name of the table
+   * @param data The data to update
+   * @param where Where conditions to determine which records to update
+   * @param returnRecord Whether to return the updated records
+   */
+  async function update(
+    tableName: string,
+    data: Record<string, any>,
+    where: Record<string, any> = {},
+    returnRecord: boolean = true,
+  ) {
+    const updateColumns = Object.keys(data);
+    const updateValues = Object.values(data);
+
+    if (updateColumns.length === 0) {
+      return {
+        json: null,
+        status: 400,
+        ok: false,
+      };
+    }
+
+    // Build the SET part of the query
+    const setClause = updateColumns.map((col) => `"${col}" = ?`).join(", ");
+
+    // Build the WHERE part of the query
+    let whereClause = "";
+    const whereValues: any[] = [];
+    const whereKeys = Object.keys(where);
+
+    if (whereKeys.length > 0) {
+      whereClause =
+        " WHERE " +
+        whereKeys
+          .map((key) => {
+            whereValues.push(where[key]);
+            return `"${key}" = ?`;
+          })
+          .join(" AND ");
+    }
+
+    // Build the complete query
+    let sql = `UPDATE "${tableName}" SET ${setClause}${whereClause}`;
+
+    // Add RETURNING * if requested
+    if (returnRecord) {
+      sql += " RETURNING *";
+    }
+
+    // Execute the query with all parameters
+    return query(sql, undefined, ...updateValues, ...whereValues);
+  }
+
+  /**
+   * Remove records from a table
+   * @param tableName The name of the table
+   * @param where Where conditions to determine which records to remove
+   * @param returnRecord Whether to return the removed records
+   */
+  async function remove(
+    tableName: string,
+    where: Record<string, any> = {},
+    returnRecord: boolean = true,
+  ) {
+    // Build the query
+    let sql = `DELETE FROM "${tableName}"`;
+    const params: any[] = [];
+
+    // Add WHERE conditions
+    const whereKeys = Object.keys(where);
+    if (whereKeys.length > 0) {
+      sql += " WHERE ";
+      sql += whereKeys
+        .map((key) => {
+          params.push(where[key]);
+          return `"${key}" = ?`;
+        })
+        .join(" AND ");
+    } else {
+      // Safety check: Prevent accidental deletion of all records
+      // If no WHERE clause is provided, make sure it's intentional
+      if (Object.keys(where).length === 0) {
+        return {
+          json: null,
+          status: 400,
+          ok: false,
+          error:
+            "DELETE operation without WHERE clause is not allowed. Use an empty object with a special flag to confirm.",
+        };
+      }
+    }
+
+    // Add RETURNING * if requested
+    if (returnRecord) {
+      sql += " RETURNING *";
+    }
+
+    // Execute the query
+    return query(sql, undefined, ...params);
   }
 
   // Middleware function to handle HTTP requests
@@ -374,6 +585,10 @@ export function createDBClient<T extends DBConfig>(
 
   return {
     query,
+    select,
+    insert,
+    update,
+    remove,
     middleware,
   };
 }
