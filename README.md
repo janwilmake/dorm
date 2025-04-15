@@ -3,8 +3,8 @@
 Functionality
 
 - 🔥 Abstracts away from the DO so you can just perform SQL queries to state from unlimited SQLite DBs, directly from your workers.
-- 🔥 Compatible and linked with outerbase to easily explore the state of the DO or DOs
-- 🔥 Does not support streaming or cursors, always responds Promises immediate from the query. This makes working with it a lot simpler.
+- 🔥 Compatible and linked with @outerbase to easily explore the state of the DO or DOs
+- 🔥 query fn promises json/ok directly from the worker. This makes working with it a lot simpler.
 
 # Demo
 
@@ -82,5 +82,11 @@ export default {
   },
 };
 ```
+
+# Why?
+
+I'm looking for a simpler way to create stateful workers. One of the issues I have with DOs is that they're hard to work with and your code becomes verbose quite easily. This is an abstraction that ensures you can perform state queries directly from your worker, queue, schedule, etc, more easily.
+
+I'm still experimenting. Hit me up if you've got ideas!
 
 Made by [janwilmake](https://x.com/janwilmake).
