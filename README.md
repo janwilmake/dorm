@@ -23,6 +23,10 @@ X Post: https://x.com/janwilmake/status/1912146275597721959
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/orm-do)
 
+# Installation
+
+`npm i dormroom`
+
 # Usage
 
 In your `wrangler.toml`
@@ -40,7 +44,7 @@ new_sqlite_classes = ["DORM"]
 In your worker:
 
 ```ts
-import { DORM, createDBClient, DBConfig, DBClient } from "./queryState";
+import { DORM, createDBClient, DBConfig, DBClient } from "dormroom/DORM";
 import { adminHtml } from "./adminHtml";
 export { DORM };
 
