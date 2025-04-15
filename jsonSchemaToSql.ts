@@ -139,20 +139,3 @@ export function jsonSchemaToSql(schema: TableSchema): SQLiteTableDefinition {
     indexStatements,
   };
 }
-
-/** simple type inference based on json schema. not needed, because we can also use a more in-depth, third-party way to do this */
-export type InferSchemaType<
-  T extends { properties: Record<string, JSONSchema> },
-> = {
-  [K in keyof T["properties"]]?: T["properties"][K]["type"] extends "string"
-    ? string
-    : T["properties"][K]["type"] extends "integer" | "number"
-    ? number
-    : T["properties"][K]["type"] extends "boolean"
-    ? boolean
-    : T["properties"][K]["type"] extends "object"
-    ? Record<string, any>
-    : T["properties"][K]["type"] extends "array"
-    ? any[]
-    : any;
-};

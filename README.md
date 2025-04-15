@@ -1,5 +1,10 @@
 # 🛏️ DORM - Unlimited SQLite DBs Directly In Your Worker
 
+> [!IMPORTANT]
+> Opinionated version of [ORM-DO](https://github.com/janwilmake/orm-do)
+>
+> Turns it into a real JSON-Schema-based ORM.
+
 Durable Object Relational Mapping, Functionality
 
 - 🔥 Abstracts away from the DO so you can just perform SQL queries to state from unlimited SQLite DBs, directly from your workers.
@@ -8,7 +13,7 @@ Durable Object Relational Mapping, Functionality
 
 # Demo
 
-See https://ormdo.wilmake.com for the `example.ts` example, which demonstrates it works using a users management API and HTML for that.
+See https://dorm.wilmake.com for the `example.ts` example, which demonstrates it works using a users management API and HTML for that.
 
 X Post: https://x.com/janwilmake/status/1912146275597721959
 
@@ -25,19 +30,19 @@ In your `wrangler.toml`
 ```toml
 [[durable_objects.bindings]]
 name = "MY_EXAMPLE_DO"
-class_name = "ORMDO"
+class_name = "DORM"
 
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["ORMDO"]
+new_sqlite_classes = ["DORM"]
 ```
 
 In your worker:
 
 ```ts
-import { ORMDO, createDBClient, DBConfig, DBClient } from "./queryState";
+import { DORM, createDBClient, DBConfig, DBClient } from "./queryState";
 import { adminHtml } from "./adminHtml";
-export { ORMDO };
+export { DORM };
 
 const dbConfig: DBConfig = {
   /** Put your CREATE TABLE queries here */

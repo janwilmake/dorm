@@ -1,5 +1,21 @@
 import { DORM, createDBClient, DBConfig } from "./DORM";
+import { TableSchema } from "./jsonSchemaToSql";
 export { DORM };
+
+const items: TableSchema = {
+  $id: "items",
+  type: "object",
+  required: ["id"],
+  properties: {
+    id: {
+      type: "string",
+      "x-dorm-auto-increment": true,
+      "x-dorm-primary-key": true,
+      "x-dorm-unique": true,
+    },
+    description: { type: "string" },
+  },
+};
 
 const dbConfig: DBConfig = {
   statements: [
@@ -12,22 +28,7 @@ const dbConfig: DBConfig = {
     )
     `,
   ],
-  schemas: [
-    {
-      $id: "items",
-      type: "object",
-      required: ["id"],
-      properties: {
-        id: {
-          type: "string",
-          "x-dorm-auto-increment": true,
-          "x-dorm-primary-key": true,
-          "x-dorm-unique": true,
-        },
-        description: { type: "string" },
-      },
-    },
-  ],
+  schemas: [items],
   version: "v1",
   authSecret: "my-secret-key",
 };
