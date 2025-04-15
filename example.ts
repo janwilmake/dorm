@@ -44,7 +44,8 @@ export default {
     const url = new URL(request.url);
     const method = request.method;
 
-    // Try handling the request with the middleware first
+    // This middleware allows the DO state be accessible through outerbase;
+    // https://studio.outerbase.com/local/new-base/starbase?url=https://ormdo.wilmake.com/api/db&type=internal&access-key=my-secret-key
     const middlewareResponse = await client.middleware(request, {
       prefix: "/api/db",
       secret: dbConfig.authSecret,
