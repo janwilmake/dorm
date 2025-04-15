@@ -89,6 +89,8 @@ export default {
 
 I'm looking for a simpler way to create stateful workers with multiple DBs. One of the issues I have with DOs is that they're hard to work with and your code becomes verbose quite easily. Also it's not yet easy to explore multiple databases. This is an abstraction that ensures you can perform state queries directly from your worker, queue, schedule, etc, more easily.
 
+My ultimate goal would be to be able to hook it up to github oauth and possibly [sponsorflare](https://sponsorflare.com) and have anyone explore their own data.
+
 I'm still experimenting. Hit me up if you've got ideas!
 
 Made by [janwilmake](https://x.com/janwilmake).
