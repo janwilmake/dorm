@@ -2,14 +2,14 @@
 
 > [!IMPORTANT]
 > Opinionated version of [ORM-DO](https://github.com/janwilmake/orm-do)
->
-> Turns it into a real JSON-Schema-based ORM.
 
 Durable Object Relational Mapping, Functionality
 
 - 🔥 Abstracts away from the DO so you can just perform SQL queries to state from unlimited SQLite DBs, directly from your workers.
 - 🔥 Compatible and linked with @outerbase to easily explore the state of the DO or DOs
 - 🔥 query fn promises json/ok directly from the worker. This makes working with it a lot simpler.
+- 🔥 allow creating tables from JSON-Schemas
+- 🔥 adds simple ORM functionality: create, update, remove, select
 
 # Demo
 
