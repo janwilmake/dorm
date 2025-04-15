@@ -12,6 +12,8 @@ See https://ormdo.wilmake.com for the `example.ts` example, which demonstrates i
 
 # Contribute
 
+(still testing this button! lmk if it worked)
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/orm-do)
 
 # Usage
