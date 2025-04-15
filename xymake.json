@@ -1,0 +1,13 @@
+{
+  "threads": [
+    {
+      "branch": "main",
+      "createdAt": "2025-04-15T17:49:37.849Z",
+      "slug": "thread1912201661281345916",
+      "updatedAt": "2025-04-15T17:49:37.854Z",
+      "url": "https://x.com/janwilmake/status/1912201127489163611"
+    }
+  ],
+  "lastPostUrl": "https://x.com/janwilmake/status/1912201661281345916",
+  "$schema": "https://cli.xymake.com/xymake.schema.json"
+}
