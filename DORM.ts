@@ -14,7 +14,6 @@ export interface DBConfig {
   version?: string;
   schemas?: TableSchema[];
   statements?: string | string[];
-  authSecret?: string;
 }
 
 // Middleware options
