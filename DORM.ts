@@ -107,9 +107,9 @@ export function createClient<T extends DBConfig>(
   const mirror = doConfig?.mirrorName
     ? doNamespace.get(
         doNamespace.idFromName(
-          getNameWithVersion(doConfig?.mirrorName, dbConfig.version),
+          getNameWithVersion(doConfig.mirrorName, dbConfig.version),
         ),
-        { locationHint: doConfig?.mirrorLocationHint },
+        { locationHint: doConfig.mirrorLocationHint },
       )
     : undefined;
 
@@ -145,9 +145,7 @@ export function createClient<T extends DBConfig>(
       if (!initialized) {
         const initResponse = await obj.fetch("https://dummy-url/init", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ schema }),
         });
 
@@ -163,17 +161,10 @@ export function createClient<T extends DBConfig>(
       }
 
       // NB: initialize the mirror as well if desired
-      if (
-        !mirrorInitialized &&
-        !options?.skipMirror &&
-        doConfig?.mirrorName &&
-        mirror
-      ) {
+      if (!mirrorInitialized && doConfig?.mirrorName && mirror) {
         const initResponse = await mirror.fetch("https://dummy-url/init", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ schema }),
         });
 
@@ -226,18 +217,19 @@ export function createClient<T extends DBConfig>(
       if (mirror && !options?.skipMirror) {
         // also execute the query in the mirror
         // NB: wait can probably be put in a
-        const promise = mirror
-          .fetch(`https://dummy-url${endpoint}`, {
+        const promise = (async () => {
+          const response = await mirror.fetch(`https://dummy-url${endpoint}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body,
-          })
-          .then(async (response) => {
-            const json = await response.json();
           });
 
+          const json = await response.json();
+          return json;
+        })();
+
         if (doConfig?.ctx?.waitUntil) {
-          doConfig?.ctx.waitUntil(promise);
+          doConfig.ctx.waitUntil(promise);
         } else {
           await promise;
         }
