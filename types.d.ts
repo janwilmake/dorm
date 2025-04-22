@@ -51,7 +51,6 @@ declare module "DORM" {
         version?: string;
         schemas?: TableSchema[];
         statements?: string | string[];
-        authSecret?: string;
     }
     export interface MiddlewareOptions {
         secret?: string;
@@ -60,6 +59,10 @@ declare module "DORM" {
     interface QueryOptions {
         isRaw?: boolean;
         isTransaction?: boolean;
+        /**
+         * If mirror is enabled in client but it's not desired to use the mirror for this query, skip performing the mirror-query here
+         */
+        skipMirror?: boolean;
     }
     type RawQueryResult = {
         columns: string[];
@@ -79,16 +82,25 @@ declare module "DORM" {
     /**
      * factory function that returns:
      * - the query function for raw queries
-     * - the middleware to perform raw queries over api
-     * - (TODO) - orm functionality
-     */
-    /**
-     * factory function that returns:
-     * - the query function for raw queries
      * - basic ORM operations (select, insert, update, remove)
      * - the middleware to perform raw queries over api
      */
-    export function createClient<T extends DBConfig>(doNamespace: DurableObjectNamespace, config: T, name?: string): {
+    export function createClient<T extends DBConfig>(doNamespace: DurableObjectNamespace, dbConfig: T, doConfig?: {
+        /**
+         * Name of the DO. Defaults to 'root'
+         */
+        name?: string;
+        locationHint?: DurableObjectLocationHint;
+        /**
+         * Name of a mirror DO (allows to group the data from multiple databases).
+         *
+         * Will not be used/created when not specified.
+         */
+        mirrorName?: string;
+        /** If passed, mirror-query will  */
+        ctx?: ExecutionContext;
+        mirrorLocationHint?: DurableObjectLocationHint;
+    }): {
         query: <O extends QueryOptions>(sql: string, options?: O, ...params: any[]) => Promise<QueryResult<QueryResponseType<O>>>;
         select: (tableName: string, where?: Record<string, any>, options?: {
             limit?: number;

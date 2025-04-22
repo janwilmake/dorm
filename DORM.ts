@@ -26,6 +26,10 @@ export interface MiddlewareOptions {
 interface QueryOptions {
   isRaw?: boolean;
   isTransaction?: boolean;
+  /**
+   * If mirror is enabled in client but it's not desired to use the mirror for this query, skip performing the mirror-query here
+   */
+  skipMirror?: boolean;
 }
 
 // Define specific return types based on raw vs regular format
@@ -70,34 +74,57 @@ function getCorsHeaders() {
 /**
  * factory function that returns:
  * - the query function for raw queries
- * - the middleware to perform raw queries over api
- * - (TODO) - orm functionality
- */
-/**
- * factory function that returns:
- * - the query function for raw queries
  * - basic ORM operations (select, insert, update, remove)
  * - the middleware to perform raw queries over api
  */
 export function createClient<T extends DBConfig>(
   doNamespace: DurableObjectNamespace,
-  config: T,
-  name?: string,
+  dbConfig: T,
+  doConfig?: {
+    /**
+     * Name of the DO. Defaults to 'root'
+     */
+    name?: string;
+    locationHint?: DurableObjectLocationHint;
+    /**
+     * Name of a mirror DO (allows to group the data from multiple databases).
+     *
+     * Will not be used/created when not specified.
+     */
+    mirrorName?: string;
+    /** If passed, mirror-query will  */
+    ctx?: ExecutionContext;
+    mirrorLocationHint?: DurableObjectLocationHint;
+  },
 ) {
-  const nameWithVersion = getNameWithVersion(name, config.version);
-  const id = doNamespace.idFromName(nameWithVersion);
-  const obj = doNamespace.get(id);
+  const obj = doNamespace.get(
+    doNamespace.idFromName(
+      getNameWithVersion(doConfig?.name, dbConfig.version),
+    ),
+    { locationHint: doConfig?.locationHint },
+  );
+
+  const mirror = doConfig?.mirrorName
+    ? doNamespace.get(
+        doNamespace.idFromName(
+          getNameWithVersion(doConfig?.mirrorName, dbConfig.version),
+        ),
+        { locationHint: doConfig?.mirrorLocationHint },
+      )
+    : undefined;
+
   let initialized = false;
+  let mirrorInitialized = false;
 
   // Convert schema to array if it's a string
-  const statementsSql = Array.isArray(config.statements)
-    ? config.statements
-    : config.statements
-    ? [config.statements]
+  const statementsSql = Array.isArray(dbConfig.statements)
+    ? dbConfig.statements
+    : dbConfig.statements
+    ? [dbConfig.statements]
     : [];
 
   const schemaSql =
-    config.schemas
+    dbConfig.schemas
       ?.map((schema) => {
         const { createTableStatement, indexStatements } =
           jsonSchemaToSql(schema);
@@ -135,6 +162,32 @@ export function createClient<T extends DBConfig>(
         initialized = true;
       }
 
+      // NB: initialize the mirror as well if desired
+      if (
+        !mirrorInitialized &&
+        !options?.skipMirror &&
+        doConfig?.mirrorName &&
+        mirror
+      ) {
+        const initResponse = await mirror.fetch("https://dummy-url/init", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ schema }),
+        });
+
+        if (!initResponse.ok) {
+          return {
+            json: null,
+            status: initResponse.status,
+            ok: false,
+          };
+        }
+
+        mirrorInitialized = true;
+      }
+
       // Format the request based on whether we want a transaction or a single query
       const body = options?.isTransaction
         ? JSON.stringify({
@@ -151,9 +204,7 @@ export function createClient<T extends DBConfig>(
 
       const response = await obj.fetch(`https://dummy-url${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body,
       });
 
@@ -172,6 +223,26 @@ export function createClient<T extends DBConfig>(
           ? responseData.result
           : responseData;
 
+      if (mirror && !options?.skipMirror) {
+        // also execute the query in the mirror
+        // NB: wait can probably be put in a
+        const promise = mirror
+          .fetch(`https://dummy-url${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+          })
+          .then(async (response) => {
+            const json = await response.json();
+          });
+
+        if (doConfig?.ctx?.waitUntil) {
+          doConfig?.ctx.waitUntil(promise);
+        } else {
+          await promise;
+        }
+      }
+
       return {
         json: result as QueryResponseType<O>,
         status: response.status,
@@ -179,11 +250,7 @@ export function createClient<T extends DBConfig>(
       };
     } catch (error) {
       console.error(`Error querying state: ${error}`);
-      return {
-        json: null,
-        status: 500,
-        ok: false,
-      };
+      return { json: null, status: 500, ok: false };
     }
   }
 

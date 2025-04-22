@@ -31,7 +31,6 @@ const dbConfig: DBConfig = {
     },
   ],
   version: "v1",
-  authSecret: "my-secret-key",
 };
 
 type Env = {
@@ -48,7 +47,7 @@ export default {
     // https://studio.outerbase.com/local/new-base/starbase?url=https://ormdo.wilmake.com/api/db&type=internal&access-key=my-secret-key
     const middlewareResponse = await client.middleware(request, {
       prefix: "/api/db",
-      secret: dbConfig.authSecret,
+      secret: "my-secret-key",
     });
     if (middlewareResponse) return middlewareResponse;
 
