@@ -53,12 +53,23 @@ I'm still experimenting. [Hit me up](https://x.com/janwilmake) if you've got ide
 
 # Code Comparison: See How DORM Reduces Verbosity vs Vanilla DOs
 
+DORM: Performing a simple query in a Worker
+
 ```ts
-// DORM: Performing a simple query in a Worker
 export default {
   async fetch(request, env, ctx) {
     // Initialize the client once
-    const client = createClient(env.MY_DO_NAMESPACE, { version: "v1" });
+    const client = createClient(env.MY_DO_NAMESPACE, {
+      version: "v1",
+      statements: [
+        `CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`,
+      ],
+    });
 
     // Perform a query directly, no need for additional abstraction layers
     const result = await client.query(
@@ -76,8 +87,11 @@ export default {
     }
   },
 };
+```
 
-// Vanilla DO: The realistic approach with multiple abstraction layers
+This is how it'd work using a vanilla DO: The realistic approach with multiple abstraction layers
+
+```ts
 export default {
   async fetch(request, env, ctx) {
     // Need to create a DO ID first
