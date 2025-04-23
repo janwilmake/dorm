@@ -51,6 +51,132 @@ My ultimate goal would be to be able to hook it up to github oauth and possibly 
 
 I'm still experimenting. [Hit me up](https://x.com/janwilmake) if you've got ideas! Feedback much appreciated.
 
+# Code Comparison: See How DORM Reduces Verbosity vs Vanilla DOs
+
+```ts
+// DORM: Performing a simple query in a Worker
+export default {
+  async fetch(request, env, ctx) {
+    // Initialize the client once
+    const client = createClient(env.MY_DO_NAMESPACE, { version: "v1" });
+
+    // Perform a query directly, no need for additional abstraction layers
+    const result = await client.query(
+      "SELECT * FROM users WHERE email = ? LIMIT 1",
+      undefined,
+      "user@example.com",
+    );
+
+    if (result.ok) {
+      return new Response(JSON.stringify(result.json));
+    } else {
+      return new Response(JSON.stringify({ error: "Query failed" }), {
+        status: result.status,
+      });
+    }
+  },
+};
+
+// Vanilla DO: The realistic approach with multiple abstraction layers
+export default {
+  async fetch(request, env, ctx) {
+    // Need to create a DO ID first
+    const id = env.MY_DO_NAMESPACE.idFromName("my_database");
+
+    // Get the DO instance
+    const doInstance = env.MY_DO_NAMESPACE.get(id);
+
+    // Need to make an internal fetch request to the DO
+    // Usually this would be wrapped in a helper function
+    const doResponse = await doInstance.fetch(
+      "https://dummy-url/getUserByEmail",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "user@example.com" }),
+      },
+    );
+
+    // Need to handle the response from the DO
+    if (doResponse.ok) {
+      const data = await doResponse.json();
+      return new Response(JSON.stringify(data.user));
+    } else {
+      const error = await doResponse.json();
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: doResponse.status,
+      });
+    }
+  },
+};
+
+// And your DO class would need:
+class MyDO {
+  constructor(state) {
+    this.state = state;
+    this.storage = state.storage;
+    this.sql = state.storage.sql;
+
+    // Usually need to initialize the schema somewhere
+    this.initializeSchema();
+  }
+
+  async initializeSchema() {
+    // Create tables if they don't exist
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/getUserByEmail" && request.method === "POST") {
+      try {
+        const { email } = await request.json();
+
+        // Call the separate method for the query
+        const user = await this.selectUserWithEmail(email);
+
+        if (user) {
+          return new Response(JSON.stringify({ user }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        } else {
+          return new Response(JSON.stringify({ message: "User not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      } catch (error) {
+        return new Response(JSON.stringify({ message: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    return new Response("Not found", { status: 404 });
+  }
+
+  // The separate query method you mentioned
+  async selectUserWithEmail(email) {
+    const cursor = this.sql.exec(
+      "SELECT * FROM users WHERE email = ? LIMIT 1",
+      email,
+    );
+
+    const users = cursor.toArray();
+    return users.length > 0 ? users[0] : null;
+  }
+}
+```
+
 # How does it work?
 
 DORM is an abstraction to [Durable Objects](https://developers.cloudflare.com/durable-objects/). I've [played with DOs a lot](https://github.com/stars/janwilmake/lists/durable-objects), but this is an abstraction I find actually **very useful** because it allows a much less bloaty experience with data in a DO. The advantage compared to a [regular D1 database](https://developers.cloudflare.com/d1/) is that you can make as many of them as you want, on the fly, with up to 10GB a piece.
