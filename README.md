@@ -27,6 +27,8 @@ The hottest features, explained:
 - 🔥 Allows mirroring your queries/data in other database
 - 🔥 Supports simple ORM functionality: create, update, remove, select
 
+[Give me a like/share on X](https://x.com/janwilmake/status/1915123176754888929) if you like it!
+
 # 🚀 Top Use Cases
 
 I've been playing with this for a while and wanted to share the most powerful use cases I've found for DORM:
