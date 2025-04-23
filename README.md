@@ -117,7 +117,7 @@ Installation is a snooze:
 npm i dormroom
 ```
 
-See [example.ts](example.ts) and [wrangler.jsonc](wrangler.jsonc) how to use!
+See [example.ts](example.ts) and [wrangler.jsonc](wrangler.jsonc) how to use! To try it without installing into your own project, you can also just clone this repo and run `wrangler dev`.
 
 See https://dorm.wilmake.com to see that live. This demonstrates it works using a users management API and HTML for that. X Post: https://x.com/janwilmake/status/1912146275597721959
 
