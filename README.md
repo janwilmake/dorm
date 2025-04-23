@@ -123,6 +123,8 @@ See [example.ts](example.ts) and [wrangler.jsonc](wrangler.jsonc) how to use! To
 
 See https://dorm.wilmake.com to see that live. This demonstrates it works using a users management API and HTML for that. X Post: https://x.com/janwilmake/status/1912146275597721959
 
+To connect your DORM(s) to Outerbase you can create it as a starbase in https://studio.outerbase.com
+
 The entire library is under 1000 lines of code with a minimalist API. Check out the source files directly to see the complete implementation - the code is the documentation
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/dorm)
