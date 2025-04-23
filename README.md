@@ -125,7 +125,7 @@ See https://dorm.wilmake.com to see that live. This demonstrates it works using 
 
 To connect your DORM(s) to Outerbase you can create it as a starbase in https://studio.outerbase.com
 
-The entire library is under 1000 lines of code with a minimalist API. Check out the source files directly to see the complete implementation - the code is the documentation
+The entire library is under 1000 lines of code with a minimalist API. Check out [DORM.ts](DORM.ts).
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/dorm)
 
