@@ -367,3 +367,4 @@ DORM is meant to be minimal so there won't be better support for ORM features ov
 # Other projects
 
 - The first version, [ORM-DO](https://github.com/janwilmake/orm-do), is more raw and doesn't provide the opinionated choices I made for an even smoother DX. It can be used as a starting point when you have other opinions :)
+- Find other work at https://github.com/janwimake or follow me on https://x.com/janwilmake
