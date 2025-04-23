@@ -1,6 +1,6 @@
 # 🛏️ DORM - Unlimited SQLite DBs Directly In Your Worker
 
-[![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main)](https://uithub.com/janwilmake/dorm)
+[![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main)](https://uithub.com/janwilmake/dorm) [![](https://badge.xymake.com/janwilmake/status/1912146275597721959)](https://xymake.com/janwilmake/status/1912146275597721959)
 
 Dorm stands for Durable Object Relational Mapping. It effectively allows for a more DX friendly interface with [SQLite-DO's in Cloudflare](https://blog.cloudflare.com/sqlite-in-durable-objects/). Here's how it compares with vanilla SQLite DO's.
 
