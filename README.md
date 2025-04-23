@@ -125,6 +125,10 @@ The entire library is under 1000 lines of code with a minimalist API. Check out 
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/dorm)
 
+## Real-world Usage Examples / Templates
+
+So far, I've only used DORM in https://github.com/janwilmake/x-oauth-template but more examples are coming. Please shoot a PR if you have a good OSS example for others to learn from!
+
 # Why?
 
 I'm looking for a simpler way to create stateful workers with multiple DBs. One of the issues I have with DOs is that they're hard to work with and your code becomes verbose quite easily. Also it's not yet easy to explore multiple databases. This is an abstraction that ensures you can perform state queries directly from your worker, queue, schedule, etc, more easily.
