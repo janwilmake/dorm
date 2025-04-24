@@ -370,6 +370,10 @@ I'm still experimenting with DORM, so there are some limitations to be aware of:
 
 DORM is meant to be minimal so there won't be better support for ORM features over time. For more advanced usage, you can just use the raw `query` functionality to do anything.
 
+## Ideas
+
+- Standardized KV table using JSON-Schema/Types: https://x.com/janwilmake/status/1915357190845538729
+
 # Other projects
 
 - The first version, [ORM-DO](https://github.com/janwilmake/orm-do), is more raw and doesn't provide the opinionated choices I made for an even smoother DX. It can be used as a starting point when you have other opinions :)
