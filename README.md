@@ -1,6 +1,6 @@
 # 🛏️ DORM - Unlimited SQLite DBs Directly In Your Worker
 
-[![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main)](https://uithub.com/janwilmake/dorm) [![](https://badge.xymake.com/janwilmake/status/1912146275597721959)](https://xymake.com/janwilmake/status/1912146275597721959)
+[![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main)](https://uithub.com/janwilmake/dorm) [![](https://badge.xymake.com/janwilmake/status/1915415919335006432)](https://xymake.com/janwilmake/status/1915415919335006432)
 
 Dorm stands for Durable Object Relational Mapping. It effectively allows for a more DX friendly interface with [SQLite-DO's in Cloudflare](https://blog.cloudflare.com/sqlite-in-durable-objects/). Here's how it compares with vanilla SQLite DO's.
 
@@ -378,3 +378,11 @@ DORM is meant to be minimal so there won't be better support for ORM features ov
 
 - The first version, [ORM-DO](https://github.com/janwilmake/orm-do), is more raw and doesn't provide the opinionated choices I made for an even smoother DX. It can be used as a starting point when you have other opinions :)
 - Find other work at https://github.com/janwimake or follow me on https://x.com/janwilmake
+
+https://x.com/janwilmake/status/1884548509723983938
+
+https://x.com/invisal89/status/1907081663802220926
+
+https://x.com/BraydenWilmoth/status/1902738849630978377
+
+https://github.com/outerbase/browsable-durable-object
