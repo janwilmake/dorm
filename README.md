@@ -29,11 +29,11 @@ The hottest features, explained:
 
 [Give me a like/share on X](https://x.com/janwilmake/status/1915123176754888929) if you like it!
 
-# 🚀 Top Use Cases
+# Top Use Cases
 
 I've been playing with this for a while and wanted to share the most powerful use cases I've found for DORM:
 
-## 🏢 Multi-tenant SaaS applications
+## Multi-tenant SaaS applications
 
 One of the sickest use cases is for multi-tenant apps. Instead of dealing with complex data partitioning in a single database, you can just create a DB per customer/organization on the fly:
 
@@ -50,7 +50,7 @@ const client = createClient(env.MY_DO_NAMESPACE, {
 
 This gives you natural data isolation without the complexity. Each tenant's data stays close to them, making everything VERY FAST. I've been using this approach for [Sponsorflare](https://sponsorflare.com) and it's been a game-changer.
 
-## 🌎 Global user profiles with edge latency
+## Global user profiles with edge latency
 
 If you're building something where users need fast access to their profile data anywhere in the world, this is perfect:
 
@@ -70,7 +70,7 @@ const client = createClient(env.MY_DO_NAMESPACE, {
 
 The DO spawns as close as possible to where the user is accessing from, so their profile data, settings, preferences, etc., are all lightning fast. No more global latency issues!
 
-## ⚡ Rate limiting and abuse prevention
+## Rate limiting and abuse prevention
 
 This one's been super useful for me. Instead of complex distributed rate limiters, you can create databases keyed by IP or username to track usage:
 
@@ -381,3 +381,7 @@ DORM is meant to be minimal so there won't be better support for ORM features ov
 - https://x.com/invisal89/status/1907081663802220926 SQLite introspection
 - Inspiration/used work: The convention outerbase uses is reapplied to make the integration with outerbase work! https://x.com/BraydenWilmoth/status/1902738849630978377
 - Original idea for Mirrors; https://x.com/janwilmake/status/1884548509723983938
+
+## TODO
+
+- Find a way to integrate more smoothly with Outerbase Studio; https://github.com/outerbase/studio/issues/426
