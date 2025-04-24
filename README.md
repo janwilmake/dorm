@@ -374,9 +374,10 @@ DORM is meant to be minimal so there won't be better support for ORM features ov
 
 - Standardized KV table using JSON-Schema/Types: https://x.com/janwilmake/status/1915357190845538729
 
-# Other projects
+# Links
 
 - The first version, [ORM-DO](https://github.com/janwilmake/orm-do), is more raw and doesn't provide the opinionated choices I made for an even smoother DX. It can be used as a starting point when you have other opinions :)
 - Find other work at https://github.com/janwimake or follow me on https://x.com/janwilmake
 - https://x.com/invisal89/status/1907081663802220926 SQLite introspection
 - Inspiration/used work: The convention outerbase uses is reapplied to make the integration with outerbase work! https://x.com/BraydenWilmoth/status/1902738849630978377
+- Original idea for Mirrors; https://x.com/janwilmake/status/1884548509723983938
