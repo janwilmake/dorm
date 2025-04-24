@@ -311,8 +311,6 @@ When creating mirrors, be wary of naming collsions and database size!
 
 - **Size**: You have max 10GB. When executing a query, you can choose to `skipMirror:true` to not perform the same query in the mirror db, to save on size for DBs with larger tables.
 
-Based on the code you've shared, I can see that error handling is fairly straightforward, using a conventional pattern of returning status codes and error messages in JSON responses. However, it could be more explicitly documented. Here are sections you could add to your README regarding error handling, performance, security, and limitations:
-
 ## Error Handling
 
 DORM uses a simple approach to error handling: query operations return a result object with `{ json, status, ok }` structure. When an error occurs, the `ok` flag is set to `false`, the `status` contains the HTTP status code, and the `json` is `null`. This allows you to handle errors in a predictable way:
