@@ -70,47 +70,6 @@ const client = createClient(env.MY_DO_NAMESPACE, {
 
 The DO spawns as close as possible to where the user is accessing from, so their profile data, settings, preferences, etc., are all lightning fast. No more global latency issues!
 
-## Rate limiting and abuse prevention
-
-This one's been super useful for me. Instead of complex distributed rate limiters, you can create databases keyed by IP or username to track usage:
-
-```ts
-// Create a rate limit tracker for an IP
-const client = createClient(env.MY_DO_NAMESPACE, {
-  version: "v1",
-  name: `ratelimit:${ipAddress}`, // Shards by IP
-  statements: [
-    `CREATE TABLE IF NOT EXISTS requests (
-      timestamp INTEGER,
-      endpoint TEXT
-    )`,
-  ],
-});
-
-// Then you can insert new requests and check counts
-await client.query(
-  "INSERT INTO requests (timestamp, endpoint) VALUES (?, ?)",
-  undefined,
-  Date.now(),
-  "/api/something",
-);
-
-const result = await client.query(
-  "SELECT COUNT(*) as count FROM requests WHERE timestamp > ? AND endpoint = ?",
-  undefined,
-  Date.now() - 60000, // Last minute
-  "/api/something",
-);
-
-if (result.json[0].count > 100) {
-  // Too many requests!
-}
-```
-
-The rate limiting happens at the edge, closest to the user, which means it's both fast and accurate. I've found this to be way simpler than using Redis or other distributed systems for this.
-
-Hit me up if you've got other ideas or questions on these use cases!
-
 # Usage & Demo
 
 Installation is a snooze:
