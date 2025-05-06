@@ -1,0 +1,379 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DORM API",
+    "description": "API for Durable Object Relational Mapping (DORM) - A SQLite database abstraction for Cloudflare Workers",
+    "version": "1.0.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/janwilmake/dorm/blob/main/LICENSE.md"
+    }
+  },
+  "servers": [
+    {
+      "url": "{baseUrl}",
+      "description": "DORM middleware API endpoint (prefix configurable via middleware options)",
+      "variables": {
+        "baseUrl": {
+          "default": "https://yourdomain.com",
+          "description": "Base URL of your DORM deployment including any configured prefix"
+        }
+      }
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Optional secret key authentication"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Invalid SQL query"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/init": {
+      "post": {
+        "summary": "Initialize database schema",
+        "description": "Creates tables and indexes as defined in the schema",
+        "operationId": "initSchema",
+        "requestBody": {
+          "description": "Schema definition",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["schema"],
+                "properties": {
+                  "schema": {
+                    "type": "array",
+                    "description": "Array of SQL statements to initialize database schema",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL)"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schema successfully initialized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "initialized_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2025-05-06T15:30:45.123Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/query": {
+      "post": {
+        "summary": "Execute SQL query",
+        "description": "Executes an SQL query and returns results as JSON objects",
+        "operationId": "executeQuery",
+        "requestBody": {
+          "description": "SQL query to execute",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sql"],
+                "properties": {
+                  "sql": {
+                    "type": "string",
+                    "description": "SQL query to execute",
+                    "example": "SELECT * FROM users WHERE email = ?"
+                  },
+                  "params": {
+                    "type": "array",
+                    "description": "Parameters to bind to the SQL query",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": ["user@example.com"]
+                  },
+                  "isRaw": {
+                    "type": "boolean",
+                    "description": "Whether to return raw results instead of JSON objects",
+                    "default": false
+                  },
+                  "isTransaction": {
+                    "type": "boolean",
+                    "description": "Whether this is a transaction",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Query executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "description": "Array of objects representing rows returned by the query",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "example": [
+                    {
+                      "id": "1",
+                      "name": "John Doe",
+                      "email": "john@example.com",
+                      "created_at": "2025-05-01T12:00:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/query/raw": {
+      "post": {
+        "summary": "Execute raw SQL query",
+        "description": "Executes an SQL query and returns results in raw format with column names, rows as arrays, and metadata",
+        "operationId": "executeRawQuery",
+        "requestBody": {
+          "description": "SQL query or transaction to execute",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["sql"],
+                    "properties": {
+                      "sql": {
+                        "type": "string",
+                        "description": "SQL query to execute",
+                        "example": "SELECT * FROM users WHERE email = ?"
+                      },
+                      "params": {
+                        "type": "array",
+                        "description": "Parameters to bind to the SQL query",
+                        "items": {
+                          "type": "string"
+                        },
+                        "example": ["user@example.com"]
+                      },
+                      "isRaw": {
+                        "type": "boolean",
+                        "description": "Whether to return raw results instead of JSON objects",
+                        "default": true
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["transaction"],
+                    "properties": {
+                      "transaction": {
+                        "type": "array",
+                        "description": "List of SQL operations in a transaction",
+                        "items": {
+                          "type": "object",
+                          "required": ["sql"],
+                          "properties": {
+                            "sql": {
+                              "type": "string",
+                              "description": "SQL query to execute",
+                              "example": "INSERT INTO users (id, name) VALUES (?, ?)"
+                            },
+                            "params": {
+                              "type": "array",
+                              "description": "Parameters to bind to the SQL query",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": ["123", "John Doe"]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Query executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "type": "array",
+                          "description": "Column names in order",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": ["id", "name", "email", "created_at"]
+                        },
+                        "rows": {
+                          "type": "array",
+                          "description": "Data rows as arrays",
+                          "items": {
+                            "type": "array",
+                            "items": {}
+                          },
+                          "example": [
+                            [
+                              "1",
+                              "John Doe",
+                              "john@example.com",
+                              "2025-05-01T12:00:00Z"
+                            ]
+                          ]
+                        },
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "rows_read": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "rows_written": {
+                              "type": "integer",
+                              "example": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
