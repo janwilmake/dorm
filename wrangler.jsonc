@@ -1,6 +1,6 @@
 {
   "name": "dorm",
-  "main": "example.ts",
+  "main": "createExec.ts",
   "assets": { "directory": "./public" },
   "compatibility_date": "2024-04-15",
   "dev": { "port": 3000 },

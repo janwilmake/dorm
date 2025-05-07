@@ -4,19 +4,16 @@
 
 Dorm stands for Durable Object Relational Mapping. It effectively allows for a more DX friendly interface with [SQLite-DO's in Cloudflare](https://blog.cloudflare.com/sqlite-in-durable-objects/). Here's how it compares with vanilla SQLite DO's.
 
-| Feature                         | Vanilla DOs | DORM |
-| ------------------------------- | ----------- | ---- |
-| Up to 10GB storage per DB       | ✅          | ✅   |
-| Create unlimited DBs on the fly | ✅          | ✅   |
-| Direct SQL queries              | ❌          | ✅   |
-| Low code verbosity              | ❌          | ✅   |
-| Built-in data exploration tools | ❌          | ✅   |
-| JSON response format            | ❌          | ✅   |
-| JSON schema support             | ❌          | ✅   |
-| Data mirroring capability       | ❌          | ✅   |
-| Simple ORM functionality        | ❌          | ✅   |
-| Easy database sharding          | ❌          | ✅   |
-| Simple worker integration       | ❌          | ✅   |
+| Feature                         | Vanilla DOs | DORM         |
+| ------------------------------- | ----------- | ------------ |
+| Up to 10GB storage per DB       | ✅          | ✅           |
+| Create unlimited DBs on the fly | ✅          | ✅           |
+| Direct SQL queries              | In DO       | Anywhere     |
+| Low code verbosity              | ❌          | ✅           |
+| Built-in data exploration tools | ❌          | ✅ Outerbase |
+| JSON schema support             | ❌          | ✅           |
+| Data mirroring capability       | ❌          | ✅           |
+| Simple ORM functionality        | ❌          | ✅           |
 
 The hottest features, explained:
 
