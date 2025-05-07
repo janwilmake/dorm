@@ -1,44 +1,81 @@
-//@ts-check
-/// <reference types="@cloudflare/workers-types" />
+/**
+ * @fileoverview SQL Client implementation for streaming SQL results
+ * This module provides a client-side implementation for handling SQL streaming responses
+ * that can be used both from TypeScript and vanilla JavaScript.
+ * @module sql-client
+ */
 
+"use strict";
+
+/** @constant {number} The maximum time to wait for a response in milliseconds */
 const TIMEOUT = 30000;
+
+/** @constant {number} Maximum number of retry attempts for failed requests */
 const MAX_RETRIES = 1;
 
 /**
- * Stream message types for the SQL stream protocol
+ * @typedef {Object} StreamMessage
+ * @property {"columns"|"row"|"meta"|"error"} type - The type of message in the stream
+ * @property {any} [data] - The data payload of the message
+ * @property {string} [error] - Error message if type is "error"
  */
-interface StreamMessage {
-  type: "columns" | "row" | "meta" | "error";
-  data?: any;
-  error?: string;
-}
+
+/**
+ * @typedef {string|number|boolean|null|Array<any>|Object<string, any>} SqlStorageValue
+ * A value that can be stored in SQL storage
+ */
 
 /**
  * Client-side cursor that implements the expected SqlStorageCursor interface
+ * @template {Object.<string, import('./types').SqlStorageValue>} T
  */
-export class ClientSqlCursor<
-  T extends Record<string, SqlStorageValue> = Record<string, SqlStorageValue>,
-> {
-  private _columnNames: string[] = [];
-  private _rows: any[][] = [];
-  private _rowsRead: number = 0;
-  private _rowsWritten: number = 0;
-  private _currentIndex: number = 0;
-  private _initialized: boolean = false;
-  private _error: string | null = null;
-  private _streamingComplete: boolean = false;
-  private _streamingPromise: Promise<void> | null = null;
-  private _resolveStreamingPromise: (() => void) | null = null;
-
+class ClientSqlCursor {
+  /**
+   * Creates a new instance of ClientSqlCursor
+   */
   constructor() {
+    /** @private @type {string[]} */
+    this._columnNames = [];
+
+    /** @private @type {any[][]} */
+    this._rows = [];
+
+    /** @private @type {number} */
+    this._rowsRead = 0;
+
+    /** @private @type {number} */
+    this._rowsWritten = 0;
+
+    /** @private @type {number} */
+    this._currentIndex = 0;
+
+    /** @private @type {boolean} */
+    this._initialized = false;
+
+    /** @private @type {string|null} */
+    this._error = null;
+
+    /** @private @type {boolean} */
+    this._streamingComplete = false;
+
+    /** @private @type {Promise<void>|null} */
+    this._streamingPromise = null;
+
+    /** @private @type {(() => void)|null} */
+    this._resolveStreamingPromise = null;
+
     // Initialize the streaming promise
     this._streamingPromise = new Promise((resolve) => {
       this._resolveStreamingPromise = resolve;
     });
   }
 
-  // Method to update cursor with stream data
-  _processStreamMessage(message: StreamMessage) {
+  /**
+   * Method to update cursor with stream data
+   * @private
+   * @param {StreamMessage} message - The message from the stream
+   */
+  _processStreamMessage(message) {
     if (message.type === "columns") {
       this._columnNames = message.data;
     } else if (message.type === "row") {
@@ -54,7 +91,10 @@ export class ClientSqlCursor<
     }
   }
 
-  // Mark streaming as complete and resolve the promise
+  /**
+   * Mark streaming as complete and resolve the promise
+   * @private
+   */
   _completeStreaming() {
     if (!this._streamingComplete && this._resolveStreamingPromise) {
       this._streamingComplete = true;
@@ -63,77 +103,115 @@ export class ClientSqlCursor<
     }
   }
 
-  // Wait for streaming to complete
-  async waitForStreamingComplete(): Promise<void> {
+  /**
+   * Wait for streaming to complete
+   * @returns {Promise<void>} Promise that resolves when streaming is complete
+   */
+  async waitForStreamingComplete() {
     if (this._streamingComplete) {
       return Promise.resolve();
     }
-    return this._streamingPromise as Promise<void>;
+    return this._streamingPromise;
   }
 
-  // Check if an error occurred during streaming
-  get error(): string | null {
+  /**
+   * Check if an error occurred during streaming
+   * @type {string|null}
+   */
+  get error() {
     return this._error;
   }
 
-  get columnNames(): string[] {
+  /**
+   * Get the column names from the query result
+   * @type {string[]}
+   */
+  get columnNames() {
     return this._columnNames;
   }
 
-  get rowsRead(): number {
+  /**
+   * Get the number of rows read from storage
+   * @type {number}
+   */
+  get rowsRead() {
     return this._rowsRead;
   }
 
-  get rowsWritten(): number {
+  /**
+   * Get the number of rows written to storage
+   * @type {number}
+   */
+  get rowsWritten() {
     return this._rowsWritten;
   }
 
-  get initialized(): boolean {
+  /**
+   * Check if the cursor has been initialized
+   * @type {boolean}
+   */
+  get initialized() {
     return this._initialized;
   }
 
-  *raw(): Generator<any[]> {
+  /**
+   * Generator that yields raw row data as arrays
+   * @yields {any[]} Raw row data
+   */
+  *raw() {
     for (const row of this._rows) {
       yield row;
     }
   }
 
-  *results(): Generator<T> {
+  /**
+   * Generator that yields structured result objects
+   * @yields {T} Structured result object
+   * @template T
+   */
+  *results() {
     for (const row of this._rows) {
-      const result = {} as T;
+      const result = {};
       for (let i = 0; i < this._columnNames.length; i++) {
         const columnName = this._columnNames[i];
-        //@ts-ignore
         result[columnName] = row[i];
       }
       yield result;
     }
   }
 
-  one(): T | null {
+  /**
+   * Returns the first result or null if no results
+   * @returns {T|null} First result or null
+   * @template T
+   */
+  one() {
     if (this._rows.length === 0) {
       return null;
     }
 
-    const result = {} as T;
+    const result = {};
     for (let i = 0; i < this._columnNames.length; i++) {
       const columnName = this._columnNames[i];
-      //@ts-ignore
       result[columnName] = this._rows[0][i];
     }
     return result;
   }
 
-  next(): IteratorResult<T> {
+  /**
+   * Iterator protocol implementation
+   * @returns {IteratorResult<T, undefined>} Iterator result
+   * @template T
+   */
+  next() {
     if (this._currentIndex >= this._rows.length) {
       return { done: true, value: undefined };
     }
 
     const row = this._rows[this._currentIndex++];
-    const result = {} as T;
+    const result = {};
     for (let i = 0; i < this._columnNames.length; i++) {
       const columnName = this._columnNames[i];
-      //@ts-ignore
       result[columnName] = row[i];
     }
 
@@ -145,9 +223,10 @@ export class ClientSqlCursor<
 
   /**
    * Returns all results as an array, waiting for streaming to complete first
-   * @returns Promise that resolves to an array of all results
+   * @returns {Promise<T[]>} Promise that resolves to an array of all results
+   * @template T
    */
-  async toArray(): Promise<T[]> {
+  async toArray() {
     // Wait for streaming to complete before returning results
     await this.waitForStreamingComplete();
 
@@ -155,7 +234,12 @@ export class ClientSqlCursor<
     return Array.from(this.results());
   }
 
-  [Symbol.iterator](): Iterator<T> {
+  /**
+   * Makes the cursor iterable
+   * @returns {Iterator<T, any, undefined>} Iterator
+   * @template T
+   */
+  [Symbol.iterator]() {
     return {
       next: () => this.next(),
     };
@@ -165,31 +249,35 @@ export class ClientSqlCursor<
 /**
  * Creates a client-side exec function that works with a DORM instance
  * with improved error handling and timeout support
- * @param stub - Durable Object stub for a DORM instance
- * @param options - Options for the exec function
- * @returns An exec function that can run SQL queries and return results
+ * @param {Object} stub - Durable Object stub for a DORM instance
+ * @param {string} sql - The SQL query to execute
+ * @param {...any} params - Parameters for the SQL query
+ * @returns {Promise<ClientSqlCursor<T>>} A cursor for accessing the results
+ * @template {Object.<string, import('./types').SqlStorageValue>} T
  */
-export async function exec<
-  T extends Record<string, SqlStorageValue> = Record<string, SqlStorageValue>,
->(stub: Fetcher, sql: string, ...params: any[]): Promise<ClientSqlCursor<T>> {
+async function exec(stub, sql, ...params) {
   // Create a new cursor to populate
-  const cursor = new ClientSqlCursor<T>();
+  const cursor = new ClientSqlCursor();
 
   // Track retries
   let retries = 0;
-  let lastError: Error | null = null;
+  let lastError = null;
 
   while (retries <= MAX_RETRIES) {
     try {
+      // In a cloudflare worker, use the DO. In browser, use the worker backend
+      const origin =
+        typeof window === "undefined" ? "https://internal-rpc" : "";
+
       // Create streaming request
-      const req = new Request("https://internal-rpc/exec", {
+      const req = new Request(`${origin}/exec`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sql, params }),
       });
 
       // Create timeout promise
-      const timeoutPromise = new Promise<Response>((_, reject) => {
+      const timeoutPromise = new Promise((_, reject) => {
         setTimeout(
           () => reject(new Error(`Request timed out after ${TIMEOUT}ms`)),
           TIMEOUT,
@@ -197,10 +285,7 @@ export async function exec<
       });
 
       // Race between the request and timeout
-      const response = (await Promise.race([
-        stub.fetch(req),
-        timeoutPromise,
-      ])) as Response;
+      const response = await Promise.race([stub.fetch(req), timeoutPromise]);
 
       if (!response.ok || !response.body) {
         const errorText = await response.text();
@@ -226,7 +311,7 @@ export async function exec<
                   const lines = buffer.trim().split("\n");
                   for (const line of lines) {
                     if (line.trim()) {
-                      const message = JSON.parse(line) as StreamMessage;
+                      const message = JSON.parse(line);
                       cursor._processStreamMessage(message);
                     }
                   }
@@ -255,7 +340,7 @@ export async function exec<
             for (const line of lines) {
               if (line.trim()) {
                 try {
-                  const message = JSON.parse(line) as StreamMessage;
+                  const message = JSON.parse(line);
                   cursor._processStreamMessage(message);
                 } catch (e) {
                   console.error("Error parsing line:", e, line);
@@ -301,4 +386,17 @@ export async function exec<
   }
 
   return cursor;
+}
+
+// Export for CommonJS
+module.exports = {
+  ClientSqlCursor,
+  exec,
+};
+
+// Export for ES modules (will be ignored in CommonJS environment)
+if (typeof exports !== "undefined") {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.ClientSqlCursor = ClientSqlCursor;
+  exports.exec = exec;
 }
