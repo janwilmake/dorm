@@ -1,6 +1,6 @@
 {
   "name": "dormroom",
-  "version": "1.0.0",
+  "version": "1.0.0-next.1",
   "files": [
     "DORM.ts"
   ],
