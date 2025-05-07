@@ -1,8 +1,9 @@
-import { createClient } from "./src/createClient";
+import { createClient, DBConfig } from "./src/createClient";
 import { DORM } from "./src/DORM";
 
 // Define the database schema
-const dbSchema = {
+const dbSchema: DBConfig = {
+  version: "v3",
   statements: [
     `CREATE TABLE IF NOT EXISTS records (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

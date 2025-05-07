@@ -388,11 +388,13 @@ async function exec(stub, sql, ...params) {
   return cursor;
 }
 
-// Export for CommonJS
-module.exports = {
-  ClientSqlCursor,
-  exec,
-};
+if (typeof module !== "undefined") {
+  // Export for CommonJS
+  module.exports = {
+    ClientSqlCursor,
+    exec,
+  };
+}
 
 // Export for ES modules (will be ignored in CommonJS environment)
 if (typeof exports !== "undefined") {

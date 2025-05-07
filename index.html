@@ -122,13 +122,13 @@
 </head>
 
 <body>
-    <h1>DORM Streaming Demo</h1>
+    <h1>🛏️ DORM Streaming Demo</h1>
 
     <div class="card">
         <h2>Generate Records</h2>
         <div class="controls">
-            <label for="recordCount">Number of records to generate (1-1000):</label>
-            <input type="number" id="recordCount" min="1" max="1000" value="100">
+            <label for="recordCount">Number of records to generate (1-50):</label>
+            <input type="number" id="recordCount" min="1" max="50" value="50">
             <button id="generateBtn">Generate Records</button>
         </div>
         <div id="generateResult"></div>
@@ -161,6 +161,9 @@
         <h3>Results (first 10 rows)</h3>
         <pre id="results"></pre>
     </div>
+
+    <!-- Include exec.js directly -->
+    <script src="/src/exec.js"></script>
 
     <script>
         // DOM Elements
@@ -198,11 +201,13 @@
             }
         }
 
+
+
         // Generate records
         generateBtn.addEventListener('click', async () => {
             const count = parseInt(recordCount.value, 10);
-            if (isNaN(count) || count < 1 || count > 1000) {
-                generateResult.textContent = 'Please enter a valid number between 1 and 1000';
+            if (isNaN(count) || count < 1 || count > 50) {
+                generateResult.textContent = 'Please enter a valid number between 1 and 50';
                 return;
             }
 
@@ -233,7 +238,22 @@
             }
         });
 
-        // Stream records
+        // Create a mock DO stub that uses fetch for browser use
+        class BrowserDOStub {
+            constructor(endpoint) {
+                this.endpoint = endpoint;
+            }
+
+            fetch(request) {
+                return fetch(this.endpoint, {
+                    method: request.method,
+                    headers: request.headers,
+                    body: request.body
+                });
+            }
+        }
+
+        // Stream records using the exec.js library
         streamBtn.addEventListener('click', async () => {
             const limit = limitCount.value ? parseInt(limitCount.value, 10) : null;
             const filter = filterName.value;
@@ -268,116 +288,85 @@
             let firstRows = [];
 
             try {
-                // Create request to /db/exec endpoint
-                const response = await fetch('/db/exec', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sql, params })
-                });
+                // Create the browser stub that points to the /db/exec endpoint
+                const stub = new BrowserDOStub("/db/exec")
+                // Use the exec function from exec.js to perform the query
+                const cursor = await exec(stub, sql, ...params);
+                console.log({ cursor })
+                // Function to process results as they come in
+                const processResults = async () => {
+                    // Wait for initial column information
+                    await new Promise(resolve => {
+                        const checkColumns = () => {
+                            if (cursor.columnNames && cursor.columnNames.length > 0) {
+                                logMessage(`Columns received: ${cursor.columnNames.join(', ')}`);
+                                resolve();
+                            } else {
+                                setTimeout(checkColumns, 50);
+                            }
+                        };
+                        checkColumns();
+                    });
 
-                if (!response.ok) {
-                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-                }
+                    // Set up iterator to process rows as they arrive
+                    const processRows = async () => {
+                        for (const row of cursor.raw()) {
+                            rowCount++;
+                            receivedCount.textContent = rowCount;
 
-                // Get reader for the stream
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
+                            // Keep first 10 rows for display
+                            if (firstRows.length < 10) {
+                                // Convert array to object with column names
+                                const rowObj = {};
+                                cursor.columnNames.forEach((col, idx) => {
+                                    rowObj[col] = row[idx];
+                                });
 
-                while (true) {
-                    const { done, value } = await reader.read();
+                                firstRows.push(rowObj);
+                                results.textContent = firstRows.map(r => JSON.stringify(r)).join('\n');
+                            }
 
-                    if (done) {
-                        // Process any remaining buffer content
-                        if (buffer) {
-                            processChunk(buffer);
+                            // Update progress if we have total info
+                            if (cursor.rowsRead > 0) {
+                                totalCount.textContent = cursor.rowsRead;
+                                const percent = Math.min(100, Math.round((rowCount / cursor.rowsRead) * 100));
+                                progressBar.style.width = `${percent}%`;
+                            }
+
+                            // Small yield to keep UI responsive
+                            await new Promise(resolve => setTimeout(resolve, 0));
                         }
-                        break;
-                    }
+                    };
 
-                    // Decode the chunk and add to buffer
-                    buffer += decoder.decode(value, { stream: true });
+                    // Wait for streaming to complete
+                    await Promise.all([
+                        processRows(),
+                        cursor.waitForStreamingComplete()
+                    ]);
 
-                    // Process complete lines (each line is a JSON object)
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || ''; // Keep the last (potentially incomplete) line
+                    // Final update after all data is processed
+                    totalCount.textContent = cursor.rowsRead;
+                    progressBar.style.width = '100%';
 
-                    for (const line of lines) {
-                        if (line.trim()) {
-                            processLine(line);
-                        }
-                    }
+                    // Complete timing
+                    const endTime = performance.now();
+                    elapsedTime.textContent = `${Math.round(endTime - startTime)}ms`;
+                    logMessage(`Stream complete: ${rowCount} records in ${Math.round(endTime - startTime)}ms`);
+                };
+
+                // Start processing results
+                await processResults();
+
+                // Check for any errors
+                if (cursor.error) {
+                    throw new Error(cursor.error);
                 }
-
-                // Complete timing
-                const endTime = performance.now();
-                elapsedTime.textContent = `${Math.round(endTime - startTime)}ms`;
-                logMessage(`Stream complete: ${rowCount} records in ${Math.round(endTime - startTime)}ms`);
 
             } catch (error) {
                 logMessage(`Error: ${error.message}`);
                 results.textContent = `Error: ${error.message}`;
             } finally {
                 streamBtn.disabled = false;
-            }
-
-            // Process a complete JSON line from the stream
-            function processLine(line) {
-                try {
-                    const message = JSON.parse(line);
-
-                    switch (message.type) {
-                        case 'columns':
-                            // Got column names
-                            totalCount.textContent = 'Pending...';
-                            logMessage(`Columns received: ${message.data.join(', ')}`);
-                            break;
-
-                        case 'row':
-                            // Got a data row
-                            rowCount++;
-                            receivedCount.textContent = rowCount;
-
-                            // Keep first 10 rows for display
-                            if (firstRows.length < 10) {
-                                firstRows.push(message.data);
-                                // Update the results display
-                                results.textContent = firstRows.map(row => JSON.stringify(row)).join('\n');
-                            }
-
-                            break;
-
-                        case 'meta':
-                            // Got metadata (end of results)
-                            totalCount.textContent = message.data.rows_read;
-                            progressBar.style.width = '100%';
-                            break;
-
-                        case 'error':
-                            logMessage(`Stream error: ${message.error}`);
-                            break;
-                    }
-
-                    // Update progress if we have total count
-                    if (totalCount.textContent !== 'Pending...' && totalCount.textContent !== '0') {
-                        const total = parseInt(totalCount.textContent, 10);
-                        const percent = Math.min(100, Math.round((rowCount / total) * 100));
-                        progressBar.style.width = `${percent}%`;
-                    }
-
-                } catch (error) {
-                    logMessage(`Error processing stream data: ${error.message}`);
-                }
-            }
-
-            // Process a chunk of text that might contain multiple lines
-            function processChunk(chunk) {
-                const lines = chunk.split('\n');
-                for (const line of lines) {
-                    if (line.trim()) {
-                        processLine(line);
-                    }
-                }
             }
         });
 
