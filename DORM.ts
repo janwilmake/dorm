@@ -578,6 +578,13 @@ export function createClient<T extends DBConfig>(
       });
     }
 
+    const subPath = url.pathname.substring(prefix.length);
+
+    if (subPath !== "/query/raw" && !subPath.startsWith("/query/raw/")) {
+      // not this middleware
+      return;
+    }
+
     // Check authentication if a secret is provided
     if (options.secret) {
       const authHeader = request.headers.get("Authorization");
@@ -590,7 +597,6 @@ export function createClient<T extends DBConfig>(
     }
 
     // Extract subpath
-    const subPath = url.pathname.substring(prefix.length);
 
     // Check if streaming is requested
     const acceptHeader = request.headers.get("Accept") || "";
