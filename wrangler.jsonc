@@ -1,12 +1,12 @@
 {
   "name": "dorm",
-  "main": "createExec.ts",
-  "assets": { "directory": "./public" },
+  "main": "example.ts",
+  "assets": { "directory": "./" },
   "compatibility_date": "2024-04-15",
   "dev": { "port": 3000 },
   "route": { "custom_domain": true, "pattern": "dorm.wilmake.com" },
   "durable_objects": {
-    "bindings": [{ "name": "MY_EXAMPLE_DO", "class_name": "DORM" }]
+    "bindings": [{ "name": "DB", "class_name": "DORM" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DORM"] }]
 }
