@@ -1,9 +1,8 @@
 {
   "name": "dormroom",
-  "version": "0.0.12",
+  "version": "1.0.0",
   "files": [
-    "DORM.ts",
-    "jsonSchemaToSql.ts"
+    "DORM.ts"
   ],
   "main": "DORM.ts",
   "types": "types.d.ts",
@@ -11,6 +10,6 @@
     "@cloudflare/workers-types": "^4.20250415.0"
   },
   "scripts": {
-    "types": "tsc DORM.ts --declaration --emitDeclarationOnly --outFile types.d.ts"
+    "types": "tsc DORM.ts --declaration --emitDeclarationOnly --outFile types.d.ts --skipLibCheck --lib esnext --target es2015"
   }
 }
