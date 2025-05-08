@@ -4,11 +4,13 @@
   "context": {
     "guide": {
       "summary": "Working example/template on how to use this",
-      "pathPatterns": ["template.ts"]
+      "pathPatterns": ["template.ts"],
+      "prompt": "Please create a new cloudflare typescript worker that uses DORM for storage with the following state and functionality: ..."
     },
     "source": {
       "summary": "Entire implementation of the package",
-      "pathPatterns": ["mod.ts", "package.json"]
+      "pathPatterns": ["mod.ts", "package.json"],
+      "prompt": "Can you tell me more about the security considerations of using this package?"
     },
     "create-guide": {
       "summary": "Create a customized guide for a particular usecase",
