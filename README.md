@@ -22,7 +22,7 @@ Perfect for SaaS applications, user profiles, rate limiting, or any case where y
 | ------------------------ | ----------------------- | ------------ | ------------------- | ------------------- |
 | **Multi-tenant**         | ✅ Unlimited            | ❌ Single DB | Pricey              | ✅ Unlimited        |
 | **Query from worker**    | ✅                      | ✅           | ✅                  | ❌ Only in DO       |
-| **Data Explorer**        | ✅ Outerbase            | ✅ Dashboard | ✅                  | ❌                  |
+| **Data Explorer**        | ✅ Outerbase            | ✅           | ✅                  | ❌                  |
 | **Edge Performance**     | Closest to user         | Global edge  | Global edge         | Closest to user     |
 | **Developer Experience** | ✅ Clean, low verbosity | ✅ Good      | Good, not CF native | ❌ Verbose, complex |
 
