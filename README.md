@@ -135,7 +135,6 @@ const userSchema: TableSchema = {
     created_at: {
       type: "string",
       format: "date-time",
-      "x-dorm-default": "CURRENT_TIMESTAMP",
     },
   },
   required: ["id", "name", "email"],
@@ -179,51 +178,6 @@ const firstUser = await cursor.one();
 // Access metadata about the query
 console.log(`Found ${cursor.rowsRead} users`);
 console.log(`Column names: ${cursor.columnNames.join(", ")}`);
-```
-
-## Transaction Support
-
-DORM provides robust transaction support for when you need to execute multiple operations atomically:
-
-```ts
-// Through the HTTP middleware
-const result = await fetch("/api/db/query/raw", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    transaction: [
-      {
-        sql: "INSERT INTO accounts (id, balance) VALUES (?, ?)",
-        params: ["acc1", 1000],
-      },
-      {
-        sql: "INSERT INTO transactions (account_id, amount) VALUES (?, ?)",
-        params: ["acc1", 1000],
-      },
-    ],
-  }),
-});
-
-// Or programmatically
-await exec(stub, "BEGIN TRANSACTION");
-try {
-  await exec(
-    stub,
-    "INSERT INTO accounts (id, balance) VALUES (?, ?)",
-    "acc1",
-    1000,
-  );
-  await exec(
-    stub,
-    "INSERT INTO transactions (account_id, amount) VALUES (?, ?)",
-    "acc1",
-    1000,
-  );
-  await exec(stub, "COMMIT");
-} catch (error) {
-  await exec(stub, "ROLLBACK");
-  throw error;
-}
 ```
 
 # Code Comparison: See How DORM Reduces Verbosity vs Vanilla DOs
@@ -487,7 +441,3 @@ DORM is meant to be minimal so there won't be better support for ORM features ov
 - https://x.com/invisal89/status/1907081663802220926 SQLite introspection
 - Inspiration/used work: The convention outerbase uses is reapplied to make the integration with outerbase work! https://x.com/BraydenWilmoth/status/1902738849630978377
 - Original idea for Mirrors; https://x.com/janwilmake/status/1884548509723983938
-
-## TODO
-
-- Find a way to integrate more smoothly with Outerbase Studio; https://github.com/outerbase/studio/issues/426

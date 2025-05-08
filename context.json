@@ -10,10 +10,9 @@
     },
     {
       "slug": "source",
-      "title": "Nutshell summary",
-      "question": "What is this all about, in a nutshell?",
-      "pathPatterns": ["mod.ts"],
-      "prompt": "Please create a single-paragraph abstract-style summary on what this repo is all about."
+      "title": "Source",
+      "question": "How was it made?",
+      "pathPatterns": ["mod.ts"]
     }
   ]
 }
