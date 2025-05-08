@@ -18,13 +18,13 @@ Perfect for SaaS applications, user profiles, rate limiting, or any case where y
 
 ## ⚡ Key Benefits vs Alternatives
 
-| Feature                  | **DORM**                | D1           | Turso               | Vanilla DOs         | Drizzle  |
-| ------------------------ | ----------------------- | ------------ | ------------------- | ------------------- | -------- |
-| **Multi-tenant**         | ✅ Unlimited            | ❌ Single DB | Pricey              | ✅ Unlimited        | ORM only |
-| **Query from worker**    | ✅                      | ✅           | ✅                  | ❌ Only in DO       | Depends  |
-| **Data Explorer**        | ✅ Outerbase            | ✅ Dashboard | ✅                  | ❌                  | ❌       |
-| **Edge Performance**     | Closest to user         | Global edge  | Global edge         | Closest to user     | Depends  |
-| **Developer Experience** | ✅ Clean, low verbosity | ✅ Good      | Good, not CF native | ❌ Verbose, complex | Good     |
+| Feature                  | **DORM**                | D1           | Turso               | Vanilla DOs         |
+| ------------------------ | ----------------------- | ------------ | ------------------- | ------------------- |
+| **Multi-tenant**         | ✅ Unlimited            | ❌ Single DB | Pricey              | ✅ Unlimited        |
+| **Query from worker**    | ✅                      | ✅           | ✅                  | ❌ Only in DO       |
+| **Data Explorer**        | ✅ Outerbase            | ✅ Dashboard | ✅                  | ❌                  |
+| **Edge Performance**     | Closest to user         | Global edge  | Global edge         | Closest to user     |
+| **Developer Experience** | ✅ Clean, low verbosity | ✅ Good      | Good, not CF native | ❌ Verbose, complex |
 
 ## 🚀 Quick Start
 
