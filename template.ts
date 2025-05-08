@@ -71,7 +71,25 @@ interface Todo extends Records {
   // SQLite doesn't have native boolean, so we use 0/1
   completed: number;
   created_at: string;
+  tenant_id: string;
 }
+
+interface Tenant extends Records {
+  id: string;
+}
+
+// JSON Schema definition for tenants table
+const tenantSchema: TableSchema = {
+  $id: "tenants", // Table name
+  type: "object",
+  properties: {
+    id: {
+      type: "string",
+      "x-dorm-primary-key": true, // Primary key constraint
+    },
+  },
+  required: ["id"], // NOT NULL constraints
+};
 
 // JSON Schema definition for Todo table
 const todoSchema: TableSchema = {
@@ -94,15 +112,19 @@ const todoSchema: TableSchema = {
       type: "string",
       format: "date-time",
     },
+    tenant_id: {
+      type: "string",
+    },
   },
-  required: ["id", "text"], // NOT NULL constraints
+  required: ["id", "text", "tenant_id"], // NOT NULL constraints
 };
 
 // Convert JSON schema to SQL statements
 const todoSqlStatements = jsonSchemaToSql(todoSchema);
+const tenantSqlStatements = jsonSchemaToSql(tenantSchema);
 
 // All SQL statements for database initialization
-const initStatements = [...todoSqlStatements];
+const initStatements = [...tenantSqlStatements, ...todoSqlStatements];
 
 export default {
   async fetch(
@@ -153,11 +175,18 @@ export default {
       // Create a database client for the specified tenant
       const client: DORMClient = await createClient({
         doNamespace: env.DORM_NAMESPACE,
-        version: "v1", // Version prefix for migrations
+        version: "v2", // Version prefix for migrations
         statements: initStatements, // Initialize with our schema
         ctx: ctx, // Pass execution context for waitUntil
         ...connection,
       });
+
+      // Ensure tenant exists in the tenants table
+      if (tenantId !== "aggregate") {
+        await client
+          .exec("INSERT OR IGNORE INTO tenants (id) VALUES (?)", tenantId)
+          .toArray();
+      }
 
       // Handle database REST API access (needed for Outerbase integration)
       // Explore your database by adding it in the studio at: https://studio.outerbase.com/local/new-base/starbase?url=https://dorm.username.workers.dev/default/api/db&type=internal&access-key=my-secret-key
@@ -188,7 +217,8 @@ export default {
         // Get tenant info
         const tenantInfo = await client
           .exec<{ tenant_id: string; todos_count: number }>(
-            `SELECT ? as tenant_id, COUNT(*) as todos_count FROM todos`,
+            `SELECT ? as tenant_id, COUNT(*) as todos_count FROM todos WHERE tenant_id = ?`,
+            tenantId,
             tenantId,
           )
           .one();
@@ -210,6 +240,10 @@ export default {
         );
       }
 
+      if (tenantId === "aggregate") {
+        return new Response("Not allowed", { status: 401 });
+      }
+
       // Stream todos as a pure JSON array (for API use)
       if (subPath === "/todos") {
         // Create a TransformStream to stream results
@@ -223,7 +257,8 @@ export default {
             try {
               // NB: client.exec is sync, and returns the cursor immediately, but ensure to apply a function or iterate over the cursor, for the query to be executed.
               const cursor = client.exec<Todo>(
-                "SELECT * FROM todos ORDER BY created_at DESC",
+                "SELECT * FROM todos WHERE tenant_id = ? ORDER BY created_at DESC",
+                tenantId,
               );
 
               // Write opening JSON array bracket
@@ -270,10 +305,11 @@ export default {
         const id = crypto.randomUUID();
         await client
           .exec(
-            "INSERT INTO todos (id, text, created_at) VALUES (?, ?, ?)",
+            "INSERT INTO todos (id, text, created_at, tenant_id) VALUES (?, ?, ?, ?)",
             id,
             newTodo,
             new Date().toISOString(),
+            tenantId,
           )
           .toArray();
 
@@ -289,7 +325,11 @@ export default {
       // Handle deleting a todo
       if (deleteTodo) {
         await client
-          .exec("DELETE FROM todos WHERE id = ?", deleteTodo)
+          .exec(
+            "DELETE FROM todos WHERE id = ? AND tenant_id = ?",
+            deleteTodo,
+            tenantId,
+          )
           .toArray();
 
         // Redirect to clear the query parameter
@@ -305,8 +345,9 @@ export default {
       if (toggleTodo) {
         await client
           .exec(
-            "UPDATE todos SET completed = CASE WHEN completed = 1 THEN 0 ELSE 1 END WHERE id = ?",
+            "UPDATE todos SET completed = CASE WHEN completed = 1 THEN 0 ELSE 1 END WHERE id = ? AND tenant_id = ?",
             toggleTodo,
+            tenantId,
           )
           .toArray();
 
@@ -321,7 +362,8 @@ export default {
 
       // Get all todos for the current tenant
       const cursor = client.exec<Todo>(
-        "SELECT * FROM todos ORDER BY created_at DESC",
+        "SELECT * FROM todos WHERE tenant_id = ? ORDER BY created_at DESC",
+        tenantId,
       );
       const todos = await cursor.toArray();
 
