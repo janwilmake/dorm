@@ -151,6 +151,7 @@ const middlewareResponse = await client.middleware(request, {
 - [Original project: ORM-DO](https://github.com/janwilmake/orm-do)
 - [Inspiration/used work - The convention outerbase uses](https://x.com/BraydenWilmoth/status/1902738849630978377) is reapplied to make the integration with outerbase work!
 - [Original idea](https://x.com/janwilmake/status/1884548509723983938) for mirroring
+- [DORM uses a 'remote sql cursor' at its core - see repo+post here](https://x.com/janwilmake/status/1920274164889354247)
 
 ## 🚧 Status: Beta
 
