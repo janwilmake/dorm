@@ -48,7 +48,7 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   */
   type RemoteSqlStorageCursor,
   type Records,
-} from "./mod";
+} from "dormroom";
 
 // Ensure to export your DO for it to be accessible
 export { DORM };
@@ -63,7 +63,8 @@ export interface Env {
 interface Todo extends Records {
   id: string;
   text: string;
-  completed: number; // SQLite doesn't have native boolean, so we use 0/1
+  // SQLite doesn't have native boolean, so we use 0/1
+  completed: number;
   created_at: string;
 }
 

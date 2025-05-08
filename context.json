@@ -1,0 +1,19 @@
+{
+  "$schema": "https://uuithub.com/context.schema.json",
+  "attribution": "Powered by Universal Information Terminal (UIT) by Jan Wilmake - https://github.com/janwilmake/uit",
+  "context": [
+    {
+      "slug": "guide",
+      "title": "Guide",
+      "question": "How to use this?",
+      "pathPatterns": ["template.ts"]
+    },
+    {
+      "slug": "source",
+      "title": "Nutshell summary",
+      "question": "What is this all about, in a nutshell?",
+      "pathPatterns": ["mod.ts"],
+      "prompt": "Please create a single-paragraph abstract-style summary on what this repo is all about."
+    }
+  ]
+}
