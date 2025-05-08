@@ -33,7 +33,7 @@ Check out the [live TODO app demo](https://dorm.wilmake.com) showing multi-tenan
 Install `dormroom` as dependency...
 
 ```bash
-npm i dormroom
+npm i dormroom@next
 ```
 
 ...or fork this repo, and use [template.ts](https://github.com/janwilmake/dorm/blob/main/template.ts) as a starting point.
