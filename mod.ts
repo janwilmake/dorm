@@ -10,6 +10,7 @@ export interface JSONSchema {
   properties?: Record<string, JSONSchema>;
   required?: string[];
   format?: string;
+  enum?: string[];
   additionalProperties?: boolean;
   // Custom SQLite extensions
   "x-dorm-primary-key"?: boolean;

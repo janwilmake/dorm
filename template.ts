@@ -217,6 +217,7 @@ export default {
         ctx.waitUntil(
           (async () => {
             try {
+              // NB: client.exec is sync, and returns the cursor immediately, but ensure to apply a function or iterate over the cursor, for the query to be executed.
               const cursor = client.exec<Todo>(
                 "SELECT * FROM todos ORDER BY created_at DESC",
               );
