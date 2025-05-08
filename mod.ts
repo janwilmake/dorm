@@ -1,5 +1,6 @@
 //@ts-check
 /// <reference types="@cloudflare/workers-types" />
+// package name: "dormroom"
 
 import { DurableObject } from "cloudflare:workers";
 
