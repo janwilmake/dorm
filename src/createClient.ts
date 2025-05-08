@@ -1,7 +1,6 @@
 //@ts-check
 /// <reference types="@cloudflare/workers-types" />
-import { exec, ClientSqlCursor } from "./exec";
-import { DORM } from "./DORM";
+import { exec, DatabaseDO, RemoteSqlStorageCursor } from "./exec";
 
 /**
  * DB Config for DORM 2.0
@@ -29,14 +28,14 @@ export type OrmProviderFn<T> = (
   exec: <R extends Record<string, SqlStorageValue>>(
     sql: string,
     ...params: any[]
-  ) => Promise<ClientSqlCursor<R>>,
+  ) => Promise<RemoteSqlStorageCursor<R>>,
 ) => T;
 
 /**
  * Creates a client for interacting with DORM
  */
 export function createClient<T extends DBConfig>(
-  doNamespace: DurableObjectNamespace<DORM>,
+  doNamespace: DurableObjectNamespace<DatabaseDO>,
   dbConfig: T,
   doConfig?: {
     name?: string;
@@ -76,43 +75,27 @@ export function createClient<T extends DBConfig>(
    * Initialize storage with schema
    */
   async function initializeStorage(
-    targetStub: DurableObjectStub<DORM>,
+    targetStub: DurableObjectStub<DatabaseDO>,
   ): Promise<boolean> {
     try {
       // Create schema_info table if not exists
-      const cursor = await exec(
+      await exec(
         targetStub,
-        `
-        CREATE TABLE IF NOT EXISTS schema_info (
-          key TEXT PRIMARY KEY,
-          value TEXT
-        )
-      `,
-      );
-
-      if (cursor.error) {
-        throw new Error(cursor.error);
-      }
+        `CREATE TABLE IF NOT EXISTS schema_info (key TEXT PRIMARY KEY, value TEXT)`,
+      ).toArray();
 
       // Execute all schema statements
       for (const statement of statements) {
-        const statementCursor = await exec(targetStub, statement);
-        if (statementCursor.error) {
-          throw new Error(statementCursor.error);
-        }
+        await exec(targetStub, statement).toArray();
       }
 
       // Update initialization timestamp
       const timestamp = new Date().toISOString();
-      const updateCursor = await exec(
+      await exec(
         targetStub,
         "INSERT OR REPLACE INTO schema_info (key, value) VALUES ('initialized_at', ?)",
         timestamp,
-      );
-
-      if (updateCursor.error) {
-        throw new Error(updateCursor.error);
-      }
+      ).toArray();
 
       return true;
     } catch (error) {
@@ -126,7 +109,7 @@ export function createClient<T extends DBConfig>(
    */
   async function execWithMirroring<
     T extends Record<string, SqlStorageValue> = Record<string, SqlStorageValue>,
-  >(sql: string, ...params: any[]): Promise<ClientSqlCursor<T>> {
+  >(sql: string, ...params: any[]): Promise<RemoteSqlStorageCursor<T>> {
     // Initialize if needed
     if (!initialized) {
       initialized = await initializeStorage(stub);
@@ -136,7 +119,7 @@ export function createClient<T extends DBConfig>(
     }
 
     // Execute query on main stub
-    const cursor = await exec<T>(stub, sql, ...params);
+    const cursor = exec<T>(stub, sql, ...params);
 
     // Execute on mirror if configured
     if (mirrorStub && doConfig?.mirrorName) {
@@ -145,7 +128,11 @@ export function createClient<T extends DBConfig>(
       }
 
       if (mirrorInitialized) {
-        const mirrorPromise = exec(mirrorStub, sql, ...params);
+        const mirrorPromise = async () => {
+          for await (const item of exec(mirrorStub, sql, ...params)) {
+            //do nothing, just walk it down
+          }
+        };
 
         // Use waitUntil if context provided
         if (doConfig?.ctx?.waitUntil) {
@@ -307,9 +294,6 @@ export function createClient<T extends DBConfig>(
         // Execute the query
         const cursor = await execWithMirroring(sql, ...(params || []));
 
-        // Wait for cursor to be fully initialized
-        await cursor.waitForStreamingComplete();
-
         if (cursor.error) {
           return new Response(JSON.stringify({ error: cursor.error }), {
             status: 500,
@@ -320,7 +304,7 @@ export function createClient<T extends DBConfig>(
         // Return as JSON
         const result = {
           columns: cursor.columnNames,
-          rows: Array.from(cursor.raw()),
+          rows: await cursor.toArray(),
           meta: {
             rows_read: cursor.rowsRead,
             rows_written: cursor.rowsWritten,
@@ -358,9 +342,6 @@ export function createClient<T extends DBConfig>(
         // Execute the query
         const cursor = await execWithMirroring(queryString, ...params);
 
-        // Wait for cursor to be fully initialized
-        await cursor.waitForStreamingComplete();
-
         if (cursor.error) {
           return new Response(JSON.stringify({ error: cursor.error }), {
             status: 500,
@@ -371,7 +352,7 @@ export function createClient<T extends DBConfig>(
         // Return as JSON
         const result = {
           columns: cursor.columnNames,
-          rows: Array.from(cursor.raw()),
+          rows: await cursor.toArray(),
           meta: {
             rows_read: cursor.rowsRead,
             rows_written: cursor.rowsWritten,
@@ -397,7 +378,9 @@ export function createClient<T extends DBConfig>(
    * Get database size
    */
   async function getDatabaseSize(): Promise<number> {
-    return stub.getDatabaseSize();
+    return Number(
+      await stub.fetch("http://internal/").then((res) => res.text()),
+    );
   }
 
   /**
@@ -405,7 +388,9 @@ export function createClient<T extends DBConfig>(
    */
   async function getMirrorDatabaseSize(): Promise<number | undefined> {
     if (mirrorStub) {
-      return mirrorStub.getDatabaseSize();
+      return Number(
+        await mirrorStub.fetch("http://internal/").then((res) => res.text()),
+      );
     }
     return undefined;
   }
