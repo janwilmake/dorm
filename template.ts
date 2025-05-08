@@ -2,6 +2,7 @@
  * DORM (Durable Object Relational Mapping) TODO Application
  *
  * A simple, user-friendly demo of DORM capabilities using a TODO application.
+ *
  * This template demonstrates:
  * - Easy database creation with JSON Schema
  * - Multi-tenant database support
@@ -9,6 +10,8 @@
  * - Simple REST API with query parameter-based operations
  * - Data mirroring to an aggregate database
  * - Integration with Outerbase for data exploration
+ *
+ *
  */
 
 import {
@@ -33,8 +36,8 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   toArray(): Promise<T[]>;
   // Get the first query result, or throw if no results
   one(): Promise<T>;
- // Get raw values as iterables
-  raw<U extends SqlStorageValue[]>(): AsyncIterableIterator<U>;
+ // Get raw values as iterable
+  raw<U extends SqlStorageValue[]>(): Promise<Iterable<U>>;
   // Column names from the query
   readonly columnNames: string[];
   // Number of rows read by the query
@@ -49,7 +52,8 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   */
   type RemoteSqlStorageCursor,
   type Records,
-} from "dormroom";
+  // NB: package name is: "dormroom" when installing as package
+} from "./mod";
 
 // Ensure to export your DO for it to be accessible
 export { DORM };

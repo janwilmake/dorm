@@ -251,7 +251,11 @@ export type Records = {
 };
 
 // Client-side implementation of SqlStorageCursor
-export class RemoteSqlStorageCursor<T extends Records> {
+export class RemoteSqlStorageCursor<
+  T extends {
+    [x: string]: SqlStorageValue;
+  },
+> {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null;
   private buffer: string = "";
   private cachedResults: T[] | null = null;
@@ -428,12 +432,20 @@ export class RemoteSqlStorageCursor<T extends Records> {
     return result.value;
   }
 
-  async *raw<U extends SqlStorageValue[]>(): AsyncIterableIterator<U> {
+  async *rawIterate<U extends SqlStorageValue[]>(): AsyncIterableIterator<U> {
     let nextResult = await this.next();
     while (!nextResult.done) {
       yield Object.values(nextResult.value) as unknown as U;
       nextResult = await this.next();
     }
+  }
+
+  async raw<U extends SqlStorageValue[]>(): Promise<Iterable<U>> {
+    const results: U[] = [];
+    for await (const row of this.rawIterate<U>()) {
+      results.push(row);
+    }
+    return results;
   }
 
   get columnNames(): string[] {
@@ -461,11 +473,11 @@ export class RemoteSqlStorageCursor<T extends Records> {
 }
 
 // Non-async wrapper function to return cursor immediately
-export function exec<T extends Records>(
-  stub: any,
-  query: string,
-  ...bindings: any[]
-): RemoteSqlStorageCursor<T> {
+export function exec<
+  T extends {
+    [x: string]: SqlStorageValue;
+  },
+>(stub: any, query: string, ...bindings: any[]): RemoteSqlStorageCursor<T> {
   // Start the fetch but don't await it
   const fetchPromise = stub.fetch(
     new Request("http://internal/query/raw", {
@@ -527,14 +539,24 @@ export interface MiddlewareOptions {
  * Type for ORM provider function
  */
 export type OrmProviderFn<T> = (
-  exec: <R extends Records>(
+  exec: <
+    R extends {
+      [x: string]: SqlStorageValue;
+    },
+  >(
     sql: string,
     ...params: any[]
   ) => RemoteSqlStorageCursor<R>,
 ) => T;
 
 export type DORMClient = {
-  exec: <T extends Records = Records>(
+  exec: <
+    T extends {
+      [x: string]: SqlStorageValue;
+    } = {
+      [x: string]: SqlStorageValue;
+    },
+  >(
     sql: string,
     ...params: any[]
   ) => RemoteSqlStorageCursor<T>;
@@ -642,10 +664,13 @@ export async function createClient(context: {
    * Execute SQL query in the client's DO, with mirroring support.
    * This is now synchronous but handles mirroring in the background.
    */
-  function execWithMirroring<T extends Records = Records>(
-    sql: string,
-    ...params: any[]
-  ): RemoteSqlStorageCursor<T> {
+  function execWithMirroring<
+    T extends {
+      [x: string]: SqlStorageValue;
+    } = {
+      [x: string]: SqlStorageValue;
+    },
+  >(sql: string, ...params: any[]): RemoteSqlStorageCursor<T> {
     // Execute query on main stub
     const cursor = exec<T>(stub, sql, ...params);
 
@@ -679,13 +704,13 @@ export async function createClient(context: {
     const url = new URL(request.url);
     const prefix = options.prefix || "/db";
 
-    // CORS headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+      "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "Authorization, Content-Type, X-Starbase-Source, X-Data-Source",
       "Access-Control-Max-Age": "86400",
-    };
+    } as const;
 
     // Handle preflight requests
     if (request.method === "OPTIONS") {
@@ -784,7 +809,8 @@ export async function createClient(context: {
               ? exec(stub, data.sql, ...(data.params || []))
               : execWithMirroring(data.sql, ...(data.params || []));
 
-            const rows = await cursor.toArray();
+            const rows = Array.from(await cursor.raw());
+
             const result = {
               columns: cursor.columnNames,
               rows,
@@ -818,7 +844,7 @@ export async function createClient(context: {
             }
 
             // Begin transaction
-            await exec(stub, "BEGIN TRANSACTION").toArray();
+            //   await exec(stub, "BEGIN TRANSACTION").toArray();
 
             const results: any[] = [];
             let success = true;
@@ -834,7 +860,8 @@ export async function createClient(context: {
                   ? exec(stub, txQuery.sql, ...(txQuery.params || []))
                   : execWithMirroring(txQuery.sql, ...(txQuery.params || []));
 
-                const rows = await cursor.toArray();
+                const rows = Array.from(await cursor.raw());
+
                 results.push({
                   columns: cursor.columnNames,
                   rows,
@@ -846,13 +873,13 @@ export async function createClient(context: {
               }
 
               // Commit transaction on success
-              await exec(stub, "COMMIT").toArray();
+              //  await exec(stub, "COMMIT").toArray();
 
               // Handle mirroring of the transaction if needed
               if (!data.skipMirror && mirrorStub && mirrorInitialized && ctx) {
                 const mirrorPromise = async () => {
                   try {
-                    await exec(mirrorStub, "BEGIN TRANSACTION").toArray();
+                    //   await exec(mirrorStub, "BEGIN TRANSACTION").toArray();
 
                     for (const txQuery of data.transaction!) {
                       await exec(
@@ -862,7 +889,7 @@ export async function createClient(context: {
                       ).toArray();
                     }
 
-                    await exec(mirrorStub, "COMMIT").toArray();
+                    //   await exec(mirrorStub, "COMMIT").toArray();
                   } catch (error) {
                     console.error("Mirror transaction error:", error);
                     try {

@@ -1,14 +1,11 @@
 {
   "name": "dormroom",
-  "version": "1.0.0-next.13",
+  "version": "1.0.0-next.15",
   "files": [
     "mod.ts"
   ],
   "main": "mod.ts",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250415.0"
-  },
-  "dependencies": {
-    "dormroom": "^1.0.0-next.13"
   }
 }
