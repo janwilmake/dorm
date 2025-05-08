@@ -11,18 +11,23 @@ Dorm stands for Durable Object Relational Mapping. It effectively allows for a m
 | Direct SQL queries              | In DO       | Anywhere     |
 | Low code verbosity              | ❌          | ✅           |
 | Built-in data exploration tools | ❌          | ✅ Outerbase |
-| JSON schema support             | ❌          | ✅           |
+| JSON schema support             | ✅          | ✅           |
 | Data mirroring capability       | ❌          | ✅           |
 | Simple ORM functionality        | ❌          | ✅           |
+| Streaming query results         | ❌          | ✅           |
+| Transaction support             | ✅          | ✅           |
+| Efficient cursor implementation | ❌          | ✅           |
 
 The hottest features, explained:
 
 - 🔥 Abstracts away from the DO so you can just perform SQL queries to state from unlimited SQLite DBs, directly from your workers.
 - 🔥 The query promises json directly from the worker. This makes working with it a lot simpler.
 - 🔥 Compatible and linked with [@outerbase](https://outerbase.com) to easily explore the state of the DO or DOs
-- 🔥 Allow creating tables from JSON-Schemas
-- 🔥 Allows mirroring your queries/data in other database
+- 🔥 Creates tables from JSON-Schemas with automatic SQL translation
+- 🔥 Allows mirroring your queries/data in other databases
 - 🔥 Supports simple ORM functionality: create, update, remove, select
+- 🔥 Streaming support for large result sets with an efficient cursor implementation
+- 🔥 Full transaction support for reliable data operations
 
 [Give me a like/share on X](https://x.com/janwilmake/status/1915123176754888929) if you like it!
 
@@ -36,12 +41,14 @@ One of the sickest use cases is for multi-tenant apps. Instead of dealing with c
 
 ```ts
 // Create a client for a specific tenant
-const client = createClient(env.MY_DO_NAMESPACE, {
+const client = await createClient({
+  doNamespace: env.MY_DO_NAMESPACE,
   version: "v1",
   name: `tenant:${tenantId}`, // Shards by tenant
   statements: [
     // Your schema here
   ],
+  ctx: context, // Optional execution context for mirroring
 });
 ```
 
@@ -53,7 +60,8 @@ If you're building something where users need fast access to their profile data 
 
 ```ts
 // Create a client for a specific user
-const client = createClient(env.MY_DO_NAMESPACE, {
+const client = await createClient({
+  doNamespace: env.MY_DO_NAMESPACE,
   version: "v1",
   name: `user:${userId}`, // Shards by user
   statements: [
@@ -62,6 +70,7 @@ const client = createClient(env.MY_DO_NAMESPACE, {
       value TEXT NOT NULL
     )`,
   ],
+  locationHint: request.cf?.colo, // Optional: hint for DO location
 });
 ```
 
@@ -75,13 +84,13 @@ Installation is a snooze:
 npm i dormroom
 ```
 
-See [example.ts](example.ts) and [wrangler.jsonc](wrangler.jsonc) how to use! To try it without installing into your own project, you can also just clone this repo and run `wrangler dev`.
+See [example.ts](example.ts) and [wrangler.jsonc](wrangler.jsonc) for usage examples! To try it without installing into your own project, you can also just clone this repo and run `wrangler dev`.
 
-See https://dorm.wilmake.com to see that live. This demonstrates it works using a users management API and HTML for that. X Post: https://x.com/janwilmake/status/1912146275597721959
+See https://dorm.wilmake.com to see it live. This demonstrates it works using a users management API and HTML for that. X Post: https://x.com/janwilmake/status/1912146275597721959
 
 To connect your DORM(s) to Outerbase you can create it as a starbase in https://studio.outerbase.com
 
-The entire library is under 1000 lines of code with a minimalist API. Check out [DORM.ts](DORM.ts).
+The library is optimized for a minimal API footprint while providing powerful features. Check out [DORM.ts](DORM.ts).
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/dorm)
 
@@ -97,6 +106,126 @@ My ultimate goal would be to be able to hook it up to github oauth and possibly 
 
 I'm still experimenting. [Hit me up](https://x.com/janwilmake) if you've got ideas! Feedback much appreciated.
 
+# Advanced Features
+
+## JSONSchema to SQL Conversion
+
+DORM includes a powerful JSONSchema to SQL translation feature that makes defining your database schema much easier:
+
+```ts
+import { jsonSchemaToSql, TableSchema } from "dormroom";
+
+const userSchema: TableSchema = {
+  $id: "users",
+  type: "object",
+  properties: {
+    id: {
+      type: "string",
+      "x-dorm-primary-key": true,
+    },
+    name: {
+      type: "string",
+      maxLength: 100,
+    },
+    email: {
+      type: "string",
+      format: "email",
+      "x-dorm-unique": true,
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      "x-dorm-default": "CURRENT_TIMESTAMP",
+    },
+  },
+  required: ["id", "name", "email"],
+};
+
+const sqlStatements = jsonSchemaToSql(userSchema);
+// Use these statements in your createClient call
+```
+
+The schema converter supports:
+
+- Primary keys and autoincrement
+- Unique constraints
+- Foreign key relationships
+- Indexes for performance optimization
+- Default values
+- Type mappings based on JSON Schema types
+
+## Streaming Query Results
+
+For large result sets, DORM supports streaming results with an efficient cursor implementation:
+
+```ts
+// Get a cursor for working with large datasets
+const cursor = client.exec<UserRecord>(
+  "SELECT * FROM users WHERE active = ?",
+  true,
+);
+
+// Use async iteration to process rows without loading everything into memory
+for await (const user of cursor) {
+  // Process each user one at a time
+}
+
+// Or convert to array if the dataset is small enough
+const allUsers = await cursor.toArray();
+
+// Get just the first row
+const firstUser = await cursor.one();
+
+// Access metadata about the query
+console.log(`Found ${cursor.rowsRead} users`);
+console.log(`Column names: ${cursor.columnNames.join(", ")}`);
+```
+
+## Transaction Support
+
+DORM provides robust transaction support for when you need to execute multiple operations atomically:
+
+```ts
+// Through the HTTP middleware
+const result = await fetch("/api/db/query/raw", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    transaction: [
+      {
+        sql: "INSERT INTO accounts (id, balance) VALUES (?, ?)",
+        params: ["acc1", 1000],
+      },
+      {
+        sql: "INSERT INTO transactions (account_id, amount) VALUES (?, ?)",
+        params: ["acc1", 1000],
+      },
+    ],
+  }),
+});
+
+// Or programmatically
+await exec(stub, "BEGIN TRANSACTION");
+try {
+  await exec(
+    stub,
+    "INSERT INTO accounts (id, balance) VALUES (?, ?)",
+    "acc1",
+    1000,
+  );
+  await exec(
+    stub,
+    "INSERT INTO transactions (account_id, amount) VALUES (?, ?)",
+    "acc1",
+    1000,
+  );
+  await exec(stub, "COMMIT");
+} catch (error) {
+  await exec(stub, "ROLLBACK");
+  throw error;
+}
+```
+
 # Code Comparison: See How DORM Reduces Verbosity vs Vanilla DOs
 
 DORM: Performing a simple query in a Worker
@@ -105,7 +234,8 @@ DORM: Performing a simple query in a Worker
 export default {
   async fetch(request, env, ctx) {
     // Initialize the client once
-    const client = createClient(env.MY_DO_NAMESPACE, {
+    const client = await createClient({
+      doNamespace: env.MY_DO_NAMESPACE,
       version: "v1",
       statements: [
         `CREATE TABLE IF NOT EXISTS users (
@@ -115,22 +245,20 @@ export default {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`,
       ],
+      ctx,
     });
 
     // Perform a query directly, no need for additional abstraction layers
-    const result = await client.query(
+    const cursor = client.exec(
       "SELECT * FROM users WHERE email = ? LIMIT 1",
-      undefined,
       "user@example.com",
     );
 
-    if (result.ok) {
-      return new Response(JSON.stringify(result.json));
-    } else {
-      return new Response(JSON.stringify({ error: "Query failed" }), {
-        status: result.status,
-      });
-    }
+    const users = await cursor.toArray();
+
+    return new Response(JSON.stringify(users), {
+      headers: { "Content-Type": "application/json" },
+    });
   },
 };
 ```
@@ -255,34 +383,54 @@ The best USP of DORM is the ability to create as many databases as you want. Whe
 
 ## Migrations
 
-Migrations are a pain. If you don't mind removing away all your data when migrating, the easiest way to migrate is to simply change the version in the config, which will be prefixed to the DO name such that you have a fresh database created. However, if this isn't an option, the current best way is to write migrations yousrelf with SQLite queries, for example, https://www.techonthenet.com/sqlite/tables/alter_table.php. Cloudflare may be improvign this in the future, but these are the optioins right now.
+Migrations are a pain. If you don't mind removing away all your data when migrating, the easiest way to migrate is to simply change the version in the config, which will be prefixed to the DO name such that you have a fresh database created. However, if this isn't an option, the current best way is to write migrations yourself with SQLite queries, for example, https://www.techonthenet.com/sqlite/tables/alter_table.php. Cloudflare may be improving this in the future, but these are the options right now.
 
 ## Mirroring
 
-DORM has **experimental** support for creating a mirror for every query you execute in a database. This mirror is most useful to create an aggregate of your data. For example, you can use a `{mirrorName: "db:root"}` for every `{name: username}` in order to have an aggregate of all users into a single database. For example, https://github.com/janwilmake/x-oauth-template uses it like this.
+DORM has support for creating a mirror for every query you execute in a database. This mirror is most useful to create an aggregate of your data. For example, you can use a `mirrorName: "db:root"` for every `name: username` in order to have an aggregate of all users into a single database. For example, https://github.com/janwilmake/x-oauth-template uses it like this.
 
-When creating mirrors, be wary of naming collsions and database size!
+When creating mirrors, be wary of naming collisions and database size:
 
-- **Unique id collisions**: when you use auto-increment and unique IDs (or columns in general), you may run into the issue that the value is unique in the main DB, but not in the mirror. This is currenlty not handled and your mirror query will silently fail! To prevent this issue I recommend not using auto increment or random in the query, and generate unique IDs beforehand when doing a query, so the data remains the same.
+- **Unique id collisions**: when you use auto-increment and unique IDs (or columns in general), you may run into the issue that the value is unique in the main DB, but not in the mirror. This is currently not handled and your mirror query will silently fail! To prevent this issue I recommend not using auto increment or random in the query, and generate unique IDs beforehand when doing a query, so the data remains the same.
 
-- **Size**: You have max 10GB. When executing a query, you can choose to `skipMirror:true` to not perform the same query in the mirror db, to save on size for DBs with larger tables.
+- **Size**: You have max 10GB. When executing a query, you can choose to use `skipMirror:true` to not perform the same query in the mirror db, to save on size for DBs with larger tables.
+
+## Streaming and Cursors
+
+DORM introduces an efficient cursor implementation for working with query results, particularly beneficial for large datasets:
+
+```typescript
+// Get a cursor for a query
+const cursor = client.exec("SELECT * FROM large_table");
+
+// Stream results without loading everything into memory
+for await (const row of cursor) {
+  // Process each row individually
+}
+
+// Get metadata about the query
+console.log(`Column names: ${cursor.columnNames.join(", ")}`);
+console.log(`Rows read: ${cursor.rowsRead}`);
+console.log(`Rows written: ${cursor.rowsWritten}`);
+```
+
+The cursor implementation is optimized for:
+
+- Memory efficiency with streaming processing
+- Complete access to query metadata
+- Iterator protocol support for natural syntax
+- Helper methods like `toArray()` and `one()`
 
 ## Error Handling
 
-DORM uses a simple approach to error handling: query operations return a result object with `{ json, status, ok }` structure. When an error occurs, the `ok` flag is set to `false`, the `status` contains the HTTP status code, and the `json` is `null`. This allows you to handle errors in a predictable way:
+DORM provides detailed error information through its cursor implementation:
 
 ```javascript
-const result = await client.query(
-  "SELECT * FROM users WHERE id = ?",
-  undefined,
-  userId,
-);
-if (!result.ok) {
-  console.error(`Error fetching user: ${result.status}`);
-  // Handle the error appropriately
-} else {
-  // Process successful result
-  const user = result.json[0];
+try {
+  const cursor = client.exec("SELECT * FROM non_existent_table");
+  const results = await cursor.toArray();
+} catch (error) {
+  console.error(`SQL error: ${error.message}`);
 }
 ```
 
@@ -296,6 +444,8 @@ The biggest performance win comes from database sharding capability - by creatin
 
 Keep in mind that while SQLite in DOs is fast, complex queries or large datasets will still have performance implications. Use appropriate indexes and keep your schemas optimized.
 
+For large result sets, the streaming cursor implementation prevents memory overload.
+
 ## Security
 
 DORM allows exposing the DB over a REST API with basic security through an optional secret-based authentication for API access:
@@ -308,23 +458,23 @@ const middlewareResponse = await client.middleware(request, {
 });
 ```
 
-When using DORM, ensure to use good pratices as you would with any DB. However, you should implement additional security layers for production use:
+When using DORM, ensure to use good practices as you would with any DB. However, you should implement additional security layers for production use:
 
 1. Use authentication mechanisms like JWT or OAuth for user or multi-admin REST access
 2. Sanitize all SQL inputs to prevent injection attacks (DORM uses parameterized queries, which helps)
-3. Use environment variables rather than hardcoding them
+3. Use environment variables rather than hardcoding secrets
 
 ## Limitations
 
 I'm still experimenting with DORM, so there are some limitations to be aware of:
 
 - Currently, no built-in schema migration system (beyond creating a new version)
-- Mirror functionality is experimental and has potential issues with ID collisions
+- Mirror functionality has potential issues with ID collisions
 - No built-in pagination helpers for large result sets
 - Limited ORM capabilities compared to full-featured ORMs
 - This is primarily designed for Cloudflare Workers environment, not for other platforms
 
-DORM is meant to be minimal so there won't be better support for ORM features over time. For more advanced usage, you can just use the raw `query` functionality to do anything.
+DORM is meant to be minimal so there won't be better support for ORM features over time. For more advanced usage, you can just use the raw `exec` functionality to do anything.
 
 ## Ideas
 

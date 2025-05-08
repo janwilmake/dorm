@@ -2,14 +2,10 @@
   "name": "dormroom",
   "version": "1.0.0-next.11",
   "files": [
-    "DORM.ts"
+    "mod.ts"
   ],
-  "main": "src/index.ts",
-  "types": "types.d.ts",
+  "main": "mod.ts",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250415.0"
-  },
-  "scripts": {
-    "types": "tsc DORM.ts --declaration --emitDeclarationOnly --outFile types.d.ts --skipLibCheck --lib esnext --target es2015"
   }
 }

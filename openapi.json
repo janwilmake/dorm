@@ -1,53 +1,124 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.0.0",
   "info": {
-    "title": "DORM Database API",
-    "description": "API for interacting with DORM (Durable Object Relational Mapper) SQLite databases",
-    "version": "2.0.0"
+    "title": "SQL Query API",
+    "description": "API for executing SQL queries with support for both standard and streaming responses",
+    "version": "1.0.0"
   },
   "servers": [
     {
       "url": "{basePath}",
-      "description": "DORM API server",
-      "variables": {
-        "basePath": {
-          "default": "/db",
-          "description": "Base path for DORM API including the prefix"
-        }
-      }
+      "variables": { "basePath": { "description": "Base URL of the API" } }
     }
   ],
   "paths": {
     "/query/raw": {
       "post": {
-        "summary": "Execute raw SQL query",
-        "description": "Execute a raw SQL query with optional parameters",
-        "operationId": "execRawSql",
+        "summary": "Execute SQL queries",
+        "description": "Execute a single SQL query or multiple queries in a transaction. Returns results in standard or streaming format based on Accept header.",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "BasicAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Accept",
+            "in": "header",
+            "description": "Response format (application/json for standard response, application/x-ndjson for streaming)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json", "application/x-ndjson"],
+              "default": "application/json"
+            }
+          }
+        ],
         "requestBody": {
+          "description": "Query or transaction to execute",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["sql"],
-                "properties": {
-                  "sql": {
-                    "type": "string",
-                    "description": "SQL query to execute",
-                    "example": "SELECT * FROM users WHERE age > ?"
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "sql": {
+                        "type": "string",
+                        "description": "SQL query to execute"
+                      },
+                      "params": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            { "type": "string" },
+                            { "type": "number" },
+                            { "type": "boolean" },
+                            { "type": "null" }
+                          ]
+                        },
+                        "description": "Optional array of parameter values"
+                      }
+                    },
+                    "required": ["sql"]
                   },
-                  "params": {
-                    "type": "array",
-                    "description": "Query parameters",
-                    "items": {
-                      "oneOf": [
-                        { "type": "string" },
-                        { "type": "number" },
-                        { "type": "boolean" },
-                        { "type": "null" }
-                      ]
+                  {
+                    "type": "object",
+                    "properties": {
+                      "transaction": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "sql": {
+                              "type": "string",
+                              "description": "SQL query to execute"
+                            },
+                            "params": {
+                              "type": "array",
+                              "items": {
+                                "oneOf": [
+                                  { "type": "string" },
+                                  { "type": "number" },
+                                  { "type": "boolean" },
+                                  { "type": "null" }
+                                ]
+                              },
+                              "description": "Optional array of parameter values"
+                            }
+                          },
+                          "required": ["sql"]
+                        },
+                        "description": "Array of queries to execute in a transaction"
+                      }
                     },
-                    "example": [18]
+                    "required": ["transaction"]
+                  }
+                ]
+              },
+              "examples": {
+                "singleQuery": {
+                  "value": {
+                    "sql": "SELECT * FROM users WHERE age > ?",
+                    "params": [21]
+                  }
+                },
+                "transaction": {
+                  "value": {
+                    "transaction": [
+                      {
+                        "sql": "INSERT INTO users (name, age) VALUES (?, ?)",
+                        "params": ["John Doe", 30]
+                      },
+                      {
+                        "sql": "SELECT * FROM users WHERE name = ?",
+                        "params": ["John Doe"]
+                      }
+                    ]
                   }
                 }
               }
@@ -62,75 +133,191 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "columns": {
+                    "result": {
                       "type": "array",
                       "items": {
-                        "type": "string"
-                      },
-                      "description": "Column names in the result set"
-                    },
-                    "rows": {
-                      "type": "array",
-                      "items": {
-                        "type": "array",
-                        "items": {}
-                      },
-                      "description": "Result rows"
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "rows_read": {
-                          "type": "integer",
-                          "description": "Number of rows read by the query"
+                        "type": "object",
+                        "properties": {
+                          "columns": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Array of column names"
+                          },
+                          "rows": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": {}
+                            },
+                            "description": "Array of rows, where each row is an array of values"
+                          },
+                          "meta": {
+                            "type": "object",
+                            "properties": {
+                              "rows_read": {
+                                "type": "integer",
+                                "description": "Number of rows read by the query"
+                              },
+                              "rows_written": {
+                                "type": "integer",
+                                "description": "Number of rows written by the query"
+                              }
+                            },
+                            "required": ["rows_read", "rows_written"]
+                          }
                         },
-                        "rows_written": {
-                          "type": "integer",
-                          "description": "Number of rows written by the query"
-                        }
+                        "required": ["columns", "rows", "meta"]
+                      },
+                      "description": "Array of query results (one per query in a transaction, or a single item for a simple query)"
+                    },
+                    "error": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Error message if an error occurred, null otherwise"
+                    }
+                  },
+                  "required": ["result"]
+                },
+                "example": {
+                  "result": [
+                    {
+                      "columns": ["id", "name", "age"],
+                      "rows": [
+                        [1, "John Doe", 30],
+                        [2, "Jane Smith", 25]
+                      ],
+                      "meta": {
+                        "rows_read": 2,
+                        "rows_written": 0
                       }
                     }
-                  }
+                  ],
+                  "error": null
                 }
               },
               "application/x-ndjson": {
                 "schema": {
-                  "type": "string",
-                  "$ref": "#/components/schemas/StreamResponse"
-                }
+                  "description": "StreamRecord (new-line delimited JSON strings)",
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["columns"],
+                          "description": "Indicates this record contains column names"
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Array of column names"
+                        }
+                      },
+                      "required": ["type", "data"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["row"],
+                          "description": "Indicates this record contains a single row of data"
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {},
+                          "description": "Array of values in the row"
+                        }
+                      },
+                      "required": ["type", "data"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["meta"],
+                          "description": "Indicates this record contains metadata about the query"
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "rows_read": {
+                              "type": "integer",
+                              "description": "Number of rows read by the query"
+                            },
+                            "rows_written": {
+                              "type": "integer",
+                              "description": "Number of rows written by the query"
+                            }
+                          },
+                          "required": ["rows_read", "rows_written"]
+                        }
+                      },
+                      "required": ["type", "data"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["error"],
+                          "description": "Indicates an error occurred during streaming"
+                        },
+                        "error": {
+                          "type": "string",
+                          "description": "Error message"
+                        }
+                      },
+                      "required": ["type", "error"]
+                    }
+                  ]
+                },
+                "example": "{\"type\":\"columns\",\"data\":[\"id\",\"name\",\"age\"]}\n{\"type\":\"row\",\"data\":[1,\"John\",30]}\n{\"type\":\"row\",\"data\":[2,\"Alice\",25]}\n{\"type\":\"meta\",\"data\":{\"rows_read\":2,\"rows_written\":0}}"
               }
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request due to invalid SQL or parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "result": {
+                      "type": "null",
+                      "description": "Will be null in case of an error"
+                    },
                     "error": {
                       "type": "string",
-                      "description": "Error message",
-                      "example": "Missing SQL query"
+                      "description": "Error message describing what went wrong"
                     }
-                  }
+                  },
+                  "required": ["error"]
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Unauthorized access",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "result": {
+                      "type": "null"
+                    },
                     "error": {
                       "type": "string",
-                      "description": "Error message",
-                      "example": "Unauthorized"
+                      "description": "Error message describing what went wrong"
                     }
-                  }
+                  },
+                  "required": ["error"]
                 }
               }
             }
@@ -142,243 +329,69 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "result": {
+                      "type": "null"
+                    },
                     "error": {
                       "type": "string",
-                      "description": "Error message"
+                      "description": "Error message describing what went wrong"
                     }
-                  }
+                  },
+                  "required": ["error"]
                 }
               }
             }
           }
-        },
-        "security": [{ "BearerAuth": [] }]
-      }
-    },
-    "/query/raw/{sqlQuery}": {
-      "get": {
-        "summary": "Execute raw SQL query via GET",
-        "description": "Execute a raw SQL query with optional parameters using a GET request",
-        "operationId": "execRawSqlGet",
-        "parameters": [
-          {
-            "name": "sqlQuery",
-            "in": "path",
-            "required": true,
-            "description": "URL-encoded SQL query to execute",
-            "schema": {
-              "type": "string"
-            },
-            "example": "SELECT%20*%20FROM%20users"
-          },
-          {
-            "name": "params",
-            "in": "query",
-            "required": false,
-            "description": "Query parameters (can be provided multiple times)",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "style": "form",
-            "explode": true,
-            "example": ["18"]
-          }
-        ],
+        }
+      },
+      "options": {
+        "summary": "CORS preflight request",
+        "description": "Handles CORS preflight requests for the /query/raw endpoint",
         "responses": {
-          "200": {
-            "description": "Query executed successfully",
-            "content": {
-              "application/json": {
+          "204": {
+            "description": "CORS headers returned successfully",
+            "headers": {
+              "Access-Control-Allow-Origin": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "columns": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "description": "Column names in the result set"
-                    },
-                    "rows": {
-                      "type": "array",
-                      "items": {
-                        "type": "array",
-                        "items": {}
-                      },
-                      "description": "Result rows"
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "rows_read": {
-                          "type": "integer",
-                          "description": "Number of rows read by the query"
-                        },
-                        "rows_written": {
-                          "type": "integer",
-                          "description": "Number of rows written by the query"
-                        }
-                      }
-                    }
-                  }
-                }
+                  "type": "string"
+                },
+                "example": "*"
               },
-              "application/x-ndjson": {
+              "Access-Control-Allow-Methods": {
                 "schema": {
-                  "type": "string",
-                  "description": "Newline-delimited JSON stream of query results"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
+                  "type": "string"
+                },
+                "example": "GET, POST, OPTIONS"
+              },
+              "Access-Control-Allow-Headers": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
+                  "type": "string"
+                },
+                "example": "Authorization, Content-Type, Accept, X-Starbase-Source, X-Data-Source"
+              },
+              "Access-Control-Max-Age": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Error message",
-                      "example": "Unauthorized"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Error message"
-                    }
-                  }
-                }
+                  "type": "string"
+                },
+                "example": "86400"
               }
             }
           }
-        },
-        "security": [{ "BearerAuth": [] }]
+        }
       }
     }
   },
   "components": {
-    "schemas": {
-      "StreamRecord": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": ["columns"],
-                "description": "Indicates this record contains column names"
-              },
-              "data": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Array of column names"
-              }
-            },
-            "required": ["type", "data"]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": ["row"],
-                "description": "Indicates this record contains a single row of data"
-              },
-              "data": {
-                "type": "array",
-                "items": {},
-                "description": "Array of values in the row"
-              }
-            },
-            "required": ["type", "data"]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": ["meta"],
-                "description": "Indicates this record contains metadata about the query"
-              },
-              "data": {
-                "type": "object",
-                "properties": {
-                  "rows_read": {
-                    "type": "integer",
-                    "description": "Number of rows read by the query"
-                  },
-                  "rows_written": {
-                    "type": "integer",
-                    "description": "Number of rows written by the query"
-                  }
-                },
-                "required": ["rows_read", "rows_written"]
-              }
-            },
-            "required": ["type", "data"]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": ["error"],
-                "description": "Indicates an error occurred during streaming"
-              },
-              "error": {
-                "type": "string",
-                "description": "Error message"
-              }
-            },
-            "required": ["type", "error"]
-          }
-        ]
-      },
-      "StreamResponse": {
-        "type": "string",
-        "description": "Newline-delimited JSON stream where each line is a StreamRecord",
-        "example": "{\"type\":\"columns\",\"data\":[\"id\",\"name\",\"age\"]}\n{\"type\":\"row\",\"data\":[1,\"John\",30]}\n{\"type\":\"row\",\"data\":[2,\"Alice\",25]}\n{\"type\":\"meta\",\"data\":{\"rows_read\":2,\"rows_written\":0}}"
-      }
-    },
     "securitySchemes": {
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
         "description": "Bearer token authentication using the secret configured in middleware options"
+      },
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Basic authentication with username and password"
       }
     }
   }
