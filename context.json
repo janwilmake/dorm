@@ -11,8 +11,14 @@
       "pathPatterns": ["mod.ts", "package.json"]
     },
     "create-guide": {
-      "summary": "Create a more custom guide for a usecase",
-      "pathPatterns": ["README.md", "template.ts"]
+      "summary": "Create a customized guide for a particular usecase",
+      "pathPatterns": ["README.md", "template.ts"],
+      "prompt": "Please create a new template for dorm similar to the provided template, for the following usecase: Multi-tenant Messaging System"
+    },
+    "general": {
+      "summary": "General information",
+      "pathPatterns": ["README.md", "LICENSE.md"],
+      "prompt": "What are the limitations?"
     }
   }
 }

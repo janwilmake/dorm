@@ -14,6 +14,7 @@
 import {
   createClient,
   DORM,
+  DORMClient,
   jsonSchemaToSql,
   TableSchema,
 
@@ -136,23 +137,21 @@ export default {
 
       const connection =
         tenantId === "aggregate"
-          ? {
-              // Show the aggregate DB. Warning: Writes won't be mirrored
-              name: "aggregate",
-            }
+          ? // Show the aggregate DB. Warning: Writes won't be mirrored to tenant dbs for this connection
+            { name: "aggregate" }
           : {
-              name: `tenant:${tenantId}`, // Shard by tenant ID
-              // Data mirroring to a central aggregate database.
+              // Shard by tenant ID
+              name: `tenant:${tenantId}`,
+              // Query execution mirroring to a central aggregate database.
               mirrorName: "aggregate",
             };
 
       // Create a database client for the specified tenant
-      const client = await createClient({
+      const client: DORMClient = await createClient({
         doNamespace: env.DORM_NAMESPACE,
         version: "v1", // Version prefix for migrations
         statements: initStatements, // Initialize with our schema
         ctx: ctx, // Pass execution context for waitUntil
-
         ...connection,
       });
 

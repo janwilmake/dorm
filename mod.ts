@@ -532,6 +532,18 @@ export type OrmProviderFn<T> = (
   ) => RemoteSqlStorageCursor<R>,
 ) => T;
 
+export type DORMClient = {
+  exec: <T extends Records = Records>(
+    sql: string,
+    ...params: any[]
+  ) => RemoteSqlStorageCursor<T>;
+  middleware: (
+    request: Request,
+    options?: MiddlewareOptions,
+  ) => Promise<Response | undefined>;
+  getDatabaseSize: () => Promise<number>;
+  getMirrorDatabaseSize: () => Promise<number | undefined>;
+};
 /**
  * Creates a client for interacting with DORM
  * This is now an async function that initializes storage upfront
@@ -545,7 +557,7 @@ export async function createClient(context: {
   mirrorName?: string;
   ctx?: ExecutionContext;
   mirrorLocationHint?: DurableObjectLocationHint;
-}) {
+}): Promise<DORMClient> {
   const {
     doNamespace,
     statements,
