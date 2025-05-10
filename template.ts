@@ -10,8 +10,6 @@
  * - Simple REST API with query parameter-based operations
  * - Data mirroring to an aggregate database
  * - Integration with Outerbase for data exploration
- *
- *
  */
 
 import {
@@ -50,6 +48,7 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   [Symbol.asyncIterator](): AsyncIterableIterator<T>;
 }
   */
+  type RemoteSqlStorageCursor,
   type Records,
   // NB: package name is: "dormroom" when installing as package
 } from "./mod";
