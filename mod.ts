@@ -187,6 +187,8 @@ export type DORMClient = {
   ) => Promise<Response | undefined>;
   getDatabaseSize: () => Promise<number>;
   getMirrorDatabaseSize: () => Promise<number | undefined>;
+  initializePromise: Promise<boolean>;
+  mirrorInitializePromise: Promise<boolean> | undefined;
 };
 /**
  * Creates a client for interacting with DORM
@@ -229,7 +231,9 @@ export async function createClient(context: {
     : undefined;
 
   /**
-   * Initialize storage with schema
+   * Initialize storage with schema...
+   *
+   * NB: THIS MAY MAKE IT SLOW
    */
   async function initializeStorage(
     targetStub: DurableObjectStub<DORM>,
@@ -262,24 +266,14 @@ export async function createClient(context: {
   }
 
   // Initialize main storage immediately
-  const initialized = await initializeStorage(stub);
-  if (!initialized) {
-    throw new Error("Failed to initialize main database");
-  }
+  const initializePromise = initializeStorage(stub);
+  // if (!initialized) {
+  //   throw new Error("Failed to initialize main database");
+  // }
 
   // Initialize mirror if provided
-  let mirrorInitialized = false;
-  if (mirrorStub) {
-    if (ctx) {
-      mirrorInitialized = await initializeStorage(mirrorStub);
-    }
-    if (!mirrorInitialized && mirrorName) {
-      console.warn(`Failed to initialize mirror database: ${mirrorName}`);
-      if (!ctx) {
-        console.warn(`Please provide a 'ctx'`);
-      }
-    }
-  }
+  const mirrorInitializePromise =
+    mirrorStub && ctx ? initializeStorage(mirrorStub) : undefined;
 
   /**
    * Execute SQL query in the client's DO, with mirroring support.
@@ -296,7 +290,7 @@ export async function createClient(context: {
     const cursor = exec<T>(stub, sql, ...params);
 
     // Execute on mirror if configured and initialized
-    if (mirrorStub && mirrorInitialized && ctx) {
+    if (mirrorStub && ctx) {
       const mirrorPromise = async () => {
         try {
           // Execute the same query on the mirror
@@ -497,7 +491,7 @@ export async function createClient(context: {
               //  await exec(stub, "COMMIT").toArray();
 
               // Handle mirroring of the transaction if needed
-              if (!data.skipMirror && mirrorStub && mirrorInitialized && ctx) {
+              if (!data.skipMirror && mirrorStub && ctx) {
                 const mirrorPromise = async () => {
                   try {
                     //   await exec(mirrorStub, "BEGIN TRANSACTION").toArray();
@@ -578,7 +572,7 @@ export async function createClient(context: {
           );
 
           // Handle mirroring if needed
-          if (!data.skipMirror && mirrorStub && mirrorInitialized && ctx) {
+          if (!data.skipMirror && mirrorStub && ctx) {
             const mirrorPromise = async () => {
               try {
                 await exec(
@@ -646,5 +640,7 @@ export async function createClient(context: {
     middleware,
     getDatabaseSize,
     getMirrorDatabaseSize,
+    initializePromise,
+    mirrorInitializePromise,
   };
 }

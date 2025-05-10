@@ -1,5 +1,7 @@
 ## Ideas
 
+- 🤔 Now, `initializeStorage` is ran every time the user connects, which does a lot of queries to the DO back and forth, that could be paralelized, or not done at all. It makes more sense to run this just once, only when changes were made to the schema, and without going to the worker and back. Normally it's done in the constructor of a durable object and all local. On the first fetch is fine too, but how it's now is obviously making it slow.
+
 - Standardized KV table using JSON-Schema/Types: https://x.com/janwilmake/status/1915357190845538729
 
 ## POST (launch sunday or monday, 6pm)
