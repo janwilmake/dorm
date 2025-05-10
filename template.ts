@@ -50,7 +50,6 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   [Symbol.asyncIterator](): AsyncIterableIterator<T>;
 }
   */
-  type RemoteSqlStorageCursor,
   type Records,
   // NB: package name is: "dormroom" when installing as package
 } from "./mod";

@@ -1,11 +1,14 @@
 {
   "name": "dormroom",
-  "version": "1.0.0-next.15",
+  "version": "1.0.0-next.16",
   "files": [
     "mod.ts"
   ],
   "main": "mod.ts",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250415.0"
+  },
+  "dependencies": {
+    "remote-sql-cursor": "^0.0.5"
   }
 }
