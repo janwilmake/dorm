@@ -2,7 +2,7 @@
 
 - Standardized KV table using JSON-Schema/Types: https://x.com/janwilmake/status/1915357190845538729
 
-## POST
+## POST (launch sunday or monday, 6pm)
 
 [video:dorm1demo]
 
@@ -13,4 +13,4 @@ Prerelease: DORM 1.0.0-next. What's new?
 - 🔥 Super smooth outerbase integration for multi-tenancy and an aggregate overview
 - 🔥 super easy to use using LLM-friendly template file of just 4000 tokens.
 
-Thanks @CasazzaNY @carollkindell @BraydenWilmoth for early feedback. Show me what you build with it!
+Thanks @CasazzaNY @carollkindell for early feedback. Show me what you build with it!
