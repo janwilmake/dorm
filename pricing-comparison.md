@@ -6,6 +6,8 @@ Sources:
 - D1: https://developers.cloudflare.com/d1/platform/pricing/index.md
 - Turso (no markdown available): https://turso.tech/pricing?frequency=monthly
 
+Thread: https://x.com/janwilmake/status/1921969406734704923
+
 ## Free Tier Comparison
 
 | Feature                   | DO/DORM (Workers Free)  | D1 (Workers Free)  | Turso (Free)      |
@@ -36,7 +38,7 @@ Sources:
 | **Compute Included**      | 400,000 GB-s           | N/A               | N/A               |
 | **Compute Overage**       | $12.50/million GB-s    | N/A               | N/A               |
 | **Requests Included**     | 1 million              | N/A               | N/A               |
-| **Requests Overage**      | $0.15/million          | N/A               | N/A               |
+| **Requests Overage**      | **$0.15/million**      | N/A               | N/A               |
 | **Syncs Included**        | N/A                    | N/A               | 10 GB/month       |
 | **Syncs Overage**         | N/A                    | N/A               | $0.35/GB          |
 | **Point-in-Time Restore** | N/A                    | N/A               | 10 days           |
