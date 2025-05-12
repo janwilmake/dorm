@@ -2,6 +2,8 @@
 
 ## POST (launch sunday or monday, 6pm)
 
+Ask @braydenwillmoth: make studio.outerbase.com available at http so it can also connect with `localhost:3000`
+
 [video:dorm1demo]
 
 Prerelease: DORM 1.0.0-next. What's new?
@@ -12,4 +14,4 @@ Prerelease: DORM 1.0.0-next. What's new?
 - 🔥 super easy to use LLM-friendly template file of just 4000 tokens.
 - 🔥 last but not least; first-class migrations support!!!
 
-Thanks @CasazzaNY @carollkindell for early feedback. Show me what you build with it!
+Thanks @CasazzaNY, @carollkindell, @flowisgreat for early feedback. Show me what you build with it!

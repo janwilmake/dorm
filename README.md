@@ -142,6 +142,7 @@ const middlewareResponse = await client.middleware(request, {
 - ✅ **Nearly zero overhead**: Thin abstraction over DO's SQLite
 - ✅ **Edge-localized**: Data stored closest to where it's accessed
 - ✅ **Up to 10GB per DB**: Sufficient for most application needs
+- ❓ Localhost isn't easily accessible YET in https://studio.outerbase.com so you need to deploy first, [use a tunnel](https://dev.to/tahsin000/free-services-to-expose-localhost-to-https-a-comparison-5c19), or run the [outerbase client](https://github.com/outerbase/studio) on localhost.
 
 ## 🔗 Links & Resources
 
