@@ -24,7 +24,7 @@ Perfect for SaaS applications, user profiles, rate limiting, or any case where y
 | **Edge Performance**     | Closest to user     | Closest to user         | Global edge | Global edge         |
 | **Developer Experience** | ❌ Verbose, complex | ✅ Clean, low verbosity | ✅ Good     | Good, not CF native |
 
-See [Turso vs DORM](turso-vs-dorm.md) and [DORM vs D1](dorm-vs-d1.md) for a more in-depth comparison with these alternatives.
+See [Turso vs DORM](turso-vs-dorm.md) and [DORM vs D1](dorm-vs-d1.md) for a more in-depth comparison with these alternatives. Also, see the [pricing comparison here](pricing-comparison.md)
 
 ## 🚀 Quick Start
 
