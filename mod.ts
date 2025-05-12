@@ -1,8 +1,7 @@
 //@ts-check
 /// <reference types="@cloudflare/workers-types" />
 // package name: "dormroom"
-import { RemoteSqlStorageCursor, exec } from "remote-sql-cursor";
-import { DatabaseDO } from "remote-sql-cursor/do";
+import { RemoteSqlStorageCursor, exec, DatabaseDO } from "remote-sql-cursor";
 export { RemoteSqlStorageCursor };
 export class DORM extends DatabaseDO {}
 
@@ -187,8 +186,6 @@ export type DORMClient = {
   ) => Promise<Response | undefined>;
   getDatabaseSize: () => Promise<number>;
   getMirrorDatabaseSize: () => Promise<number | undefined>;
-  initializePromise: Promise<boolean>;
-  mirrorInitializePromise: Promise<boolean> | undefined;
 };
 /**
  * Creates a client for interacting with DORM
@@ -197,7 +194,7 @@ export type DORMClient = {
 export async function createClient(context: {
   doNamespace: DurableObjectNamespace<DORM>;
   version?: string;
-  statements: string[];
+  migrations?: { [version: number]: string[] };
   name?: string;
   locationHint?: DurableObjectLocationHint;
   mirrorName?: string;
@@ -206,7 +203,7 @@ export async function createClient(context: {
 }): Promise<DORMClient> {
   const {
     doNamespace,
-    statements,
+    migrations,
     ctx,
     locationHint,
     mirrorLocationHint,
@@ -231,51 +228,6 @@ export async function createClient(context: {
     : undefined;
 
   /**
-   * Initialize storage with schema...
-   *
-   * NB: THIS MAY MAKE IT SLOW
-   */
-  async function initializeStorage(
-    targetStub: DurableObjectStub<DORM>,
-  ): Promise<boolean> {
-    try {
-      // Create schema_info table if not exists
-      await exec(
-        targetStub,
-        `CREATE TABLE IF NOT EXISTS schema_info (key TEXT PRIMARY KEY, value TEXT)`,
-      ).toArray();
-
-      // Execute all schema statements
-      for (const statement of statements) {
-        await exec(targetStub, statement).toArray();
-      }
-
-      // Update initialization timestamp
-      const timestamp = new Date().toISOString();
-      await exec(
-        targetStub,
-        "INSERT OR REPLACE INTO schema_info (key, value) VALUES ('initialized_at', ?)",
-        timestamp,
-      ).toArray();
-
-      return true;
-    } catch (error) {
-      console.error("Schema initialization error:", error);
-      return false;
-    }
-  }
-
-  // Initialize main storage immediately
-  const initializePromise = initializeStorage(stub);
-  // if (!initialized) {
-  //   throw new Error("Failed to initialize main database");
-  // }
-
-  // Initialize mirror if provided
-  const mirrorInitializePromise =
-    mirrorStub && ctx ? initializeStorage(mirrorStub) : undefined;
-
-  /**
    * Execute SQL query in the client's DO, with mirroring support.
    * This is now synchronous but handles mirroring in the background.
    */
@@ -287,14 +239,14 @@ export async function createClient(context: {
     },
   >(sql: string, ...params: any[]): RemoteSqlStorageCursor<T> {
     // Execute query on main stub
-    const cursor = exec<T>(stub, sql, ...params);
+    const cursor = exec<T>(stub, migrations, sql, ...params);
 
     // Execute on mirror if configured and initialized
     if (mirrorStub && ctx) {
       const mirrorPromise = async () => {
         try {
           // Execute the same query on the mirror
-          for await (const _ of exec(mirrorStub, sql, ...params)) {
+          for await (const _ of exec(mirrorStub, migrations, sql, ...params)) {
             // Do nothing, just ensure it's processed
           }
         } catch (error) {
@@ -421,7 +373,7 @@ export async function createClient(context: {
           if (data.sql) {
             // Single query
             const cursor = data.skipMirror
-              ? exec(stub, data.sql, ...(data.params || []))
+              ? exec(stub, migrations, data.sql, ...(data.params || []))
               : execWithMirroring(data.sql, ...(data.params || []));
 
             const rows = Array.from(await cursor.raw());
@@ -472,7 +424,12 @@ export async function createClient(context: {
                 }
 
                 const cursor = data.skipMirror
-                  ? exec(stub, txQuery.sql, ...(txQuery.params || []))
+                  ? exec(
+                      stub,
+                      migrations,
+                      txQuery.sql,
+                      ...(txQuery.params || []),
+                    )
                   : execWithMirroring(txQuery.sql, ...(txQuery.params || []));
 
                 const rows = Array.from(await cursor.raw());
@@ -499,6 +456,7 @@ export async function createClient(context: {
                     for (const txQuery of data.transaction!) {
                       await exec(
                         mirrorStub,
+                        migrations,
                         txQuery.sql,
                         ...(txQuery.params || []),
                       ).toArray();
@@ -508,7 +466,7 @@ export async function createClient(context: {
                   } catch (error) {
                     console.error("Mirror transaction error:", error);
                     try {
-                      await exec(mirrorStub, "ROLLBACK").toArray();
+                      //  await exec(mirrorStub, "ROLLBACK").toArray();
                     } catch (rollbackError) {
                       console.error("Mirror rollback error:", rollbackError);
                     }
@@ -521,7 +479,7 @@ export async function createClient(context: {
               // Rollback on any error
               success = false;
               try {
-                await exec(stub, "ROLLBACK").toArray();
+                //   await exec(stub, "ROLLBACK").toArray();
               } catch (rollbackError) {
                 console.error("Rollback error:", rollbackError);
               }
@@ -577,6 +535,7 @@ export async function createClient(context: {
               try {
                 await exec(
                   mirrorStub,
+                  migrations,
                   data.sql!,
                   ...(data.params || []),
                 ).toArray();
@@ -597,7 +556,7 @@ export async function createClient(context: {
             },
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         return new Response(
           JSON.stringify({
             error: error.message,
@@ -640,7 +599,5 @@ export async function createClient(context: {
     middleware,
     getDatabaseSize,
     getMirrorDatabaseSize,
-    initializePromise,
-    mirrorInitializePromise,
   };
 }

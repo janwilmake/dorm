@@ -117,13 +117,6 @@ const todoSchema: TableSchema = {
   required: ["id", "text", "tenant_id"], // NOT NULL constraints
 };
 
-// Convert JSON schema to SQL statements
-const todoSqlStatements = jsonSchemaToSql(todoSchema);
-const tenantSqlStatements = jsonSchemaToSql(tenantSchema);
-
-// All SQL statements for database initialization
-const initStatements = [...tenantSqlStatements, ...todoSqlStatements];
-
 export default {
   async fetch(
     request: Request,
@@ -174,7 +167,11 @@ export default {
       const client: DORMClient = await createClient({
         doNamespace: env.DORM_NAMESPACE,
         version: "v2", // Version prefix for migrations
-        statements: initStatements, // Initialize with our schema
+        migrations: {
+          // initial version
+          1: jsonSchemaToSql(todoSchema).concat(jsonSchemaToSql(tenantSchema)),
+          // we can alter the tables by adding migrations here
+        },
         ctx: ctx, // Pass execution context for waitUntil
         ...connection,
       });
@@ -272,7 +269,7 @@ export default {
 
               // Write closing JSON bracket
               await writer.write(encoder.encode("]"));
-            } catch (error) {
+            } catch (error: any) {
               console.error("Streaming error:", error);
               // Write error info if something goes wrong mid-stream
               await writer.write(
@@ -640,7 +637,7 @@ export default {
       return new Response(html, {
         headers: { "Content-Type": "text/html" },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error handling request:", error);
       return new Response(JSON.stringify({ error: error.message }, null, 2), {
         status: 500,
