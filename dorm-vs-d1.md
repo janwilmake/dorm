@@ -62,15 +62,20 @@
 
 **D1**:
 
+See [pricing page](https://developers.cloudflare.com/d1/platform/pricing/)
+
 - Free tier: 5GB storage, limited queries
-- Paid: $0.75/million rows read, $1.00/million rows written, $0.25/GB storage
+- Paid: $0.75/million rows read, $0.001/million rows written, $0.25/GB storage
 
 **DORM**:
 
-- Charged as Durable Objects
+Charged as [Durable Objects](https://developers.cloudflare.com/durable-objects/platform/pricing/), which is similar to D1:
+
 - $0.15/million requests
-- $0.12/million GB-seconds duration
-- $0.20/GB storage per month
+- $12.50/million GB-seconds duration
+- $0.25/GB storage per month
+- $0.001 / million rows read
+- $1.00 / million rows written
 
 ## Migration Path
 
