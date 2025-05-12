@@ -2,15 +2,12 @@
 
 [![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main)](https://uithub.com/janwilmake/dorm) [![](https://badge.xymake.com/janwilmake/status/1915415919335006432)](https://xymake.com/janwilmake/status/1915415919335006432)
 
-> **DORM = Durable Object Relational Mapping**: A developer-friendly interface to SQLite databases in Cloudflare Workers
-
-## 🔍 What & Why
-
 DORM makes building multi-tenant applications on Cloudflare **ridiculously easy** by letting you:
 
 1. **Create unlimited SQLite DBs on the fly** (up to 10GB each)
 2. **Query them directly from anywhere** in your worker (not just inside DOs)
 3. **Explore and manage your data** with built-in [Outerbase](https://outerbase.com) integration
+4. **Migrate once, everywhere** with built-in JIT migration-support
 
 Perfect for SaaS applications, user profiles, rate limiting, or any case where you need isolated data stores that are **lightning fast** at the edge.
 
@@ -18,13 +15,14 @@ Perfect for SaaS applications, user profiles, rate limiting, or any case where y
 
 ## ⚡ Key Benefits vs Alternatives
 
-| Feature                  | **DORM**                | D1          | Turso               | Vanilla DOs         |
-| ------------------------ | ----------------------- | ----------- | ------------------- | ------------------- |
-| **Multi-tenant**         | ✅ Unlimited            | ❌ One DB   | Pricey              | ✅ Unlimited        |
-| **Query from worker**    | ✅                      | ✅          | ✅                  | ❌ Only in DO       |
-| **Data Explorer**        | ✅ Outerbase            | ✅          | ✅                  | ❌                  |
-| **Edge Performance**     | Closest to user         | Global edge | Global edge         | Closest to user     |
-| **Developer Experience** | ✅ Clean, low verbosity | ✅ Good     | Good, not CF native | ❌ Verbose, complex |
+| Feature                  | Vanilla DOs         | **DORM** 🛏️             | D1          | Turso               |
+| ------------------------ | ------------------- | ----------------------- | ----------- | ------------------- |
+| **Multi-tenant**         | ✅ Unlimited        | ✅ Unlimited            | ❌ One DB   | Pricey              |
+| **Query from worker**    | ❌ Only in DO       | ✅                      | ✅          | ✅                  |
+| **Data Explorer**        | ❌                  | ✅ Outerbase            | ✅          | ✅                  |
+| **Migrations**           | ❌                  | ✅                      | ✅          | ✅                  |
+| **Edge Performance**     | Closest to user     | Closest to user         | Global edge | Global edge         |
+| **Developer Experience** | ❌ Verbose, complex | ✅ Clean, low verbosity | ✅ Good     | Good, not CF native |
 
 ## 🚀 Quick Start
 
@@ -45,13 +43,15 @@ npm i dormroom@next
 Create a separate database for each customer/organization:
 
 ```typescript
-const client = await createClient({
+const client = createClient({
   doNamespace: env.MY_DO_NAMESPACE,
   version: "v1",
   name: `tenant:${tenantId}`, // One DB per tenant
-  statements: [
-    /* Your schema */
-  ],
+  migrations: {
+    1: [
+      /* Your sql statements to create tables or alter them. Migrations are applied just once. */
+    ],
+  },
 });
 ```
 
@@ -60,7 +60,7 @@ const client = await createClient({
 Store user data closest to where they access it:
 
 ```typescript
-const client = await createClient({
+const client = createClient({
   doNamespace: env.MY_DO_NAMESPACE,
   version: "v1",
   name: `user:${userId}`, // One DB per user
@@ -72,7 +72,7 @@ const client = await createClient({
 Mirror tenant operations to a central database for analytics:
 
 ```typescript
-const client = await createClient({
+const client = createClient({
   doNamespace: env.MY_DO_NAMESPACE,
   name: `tenant:${tenantId}`,
   mirrorName: "aggregate", // Mirror operations to an aggregate DB
@@ -91,7 +91,7 @@ When creating mirrors, be wary of naming collisions and database size:
 - **Outerbase integration**: Explore and manage your data with built-in tools
 - **JSON Schema support**: Define tables using JSON Schema with automatic SQL translation
 - **Streaming queries**: Efficient cursor implementation for large result sets
-- **Transaction support**: Full ACID compliance for reliable operations
+- **JIT Migrations**: Migrations are applied when needed, just once, right before a DO gets accessed.
 - **Data mirroring**: Mirror operations to aggregate databases for analytics
 - **Low verbosity**: Clean API that hides Durable Object complexity
 
@@ -142,7 +142,6 @@ const middlewareResponse = await client.middleware(request, {
 - ✅ **Nearly zero overhead**: Thin abstraction over DO's SQLite
 - ✅ **Edge-localized**: Data stored closest to where it's accessed
 - ✅ **Up to 10GB per DB**: Sufficient for most application needs
-- ❓ **No built-in migrations**: Beyond version-based creation. If you don't mind removing away all your data when migrating, the easiest way to migrate is to simply change the version in the config, which will be prefixed to the DO name such that you have a fresh database created. However, if this isn't an option, the current best way is to write migrations yourself with SQLite queries, for example, https://www.techonthenet.com/sqlite/tables/alter_table.php. Cloudflare may be improving this in the future, but these are the options right now.
 
 ## 🔗 Links & Resources
 

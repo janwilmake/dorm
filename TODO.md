@@ -2,7 +2,7 @@
 
 ## POST (launch sunday or monday, 6pm)
 
-❗️ Add `init` into template and docs.
+Update docs about the migrations.
 
 [video:dorm1demo]
 

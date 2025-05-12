@@ -191,7 +191,7 @@ export type DORMClient = {
  * Creates a client for interacting with DORM
  * This is now an async function that initializes storage upfront
  */
-export async function createClient(context: {
+export function createClient(context: {
   doNamespace: DurableObjectNamespace<DORM>;
   version?: string;
   migrations?: { [version: number]: string[] };
@@ -200,7 +200,7 @@ export async function createClient(context: {
   mirrorName?: string;
   ctx?: ExecutionContext;
   mirrorLocationHint?: DurableObjectLocationHint;
-}): Promise<DORMClient> {
+}): DORMClient {
   const {
     doNamespace,
     migrations,

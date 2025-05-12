@@ -164,7 +164,7 @@ export default {
             };
 
       // Create a database client for the specified tenant
-      const client: DORMClient = await createClient({
+      const client: DORMClient = createClient({
         doNamespace: env.DORM_NAMESPACE,
         version: "v2", // Version prefix for migrations
         migrations: {
