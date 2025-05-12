@@ -1,6 +1,6 @@
 # 🛏️ DORM - Unlimited SQLite DBs Directly In Your Worker
 
-[![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main)](https://uithub.com/janwilmake/dorm) [![](https://badge.xymake.com/janwilmake/status/1915415919335006432)](https://xymake.com/janwilmake/status/1915415919335006432)
+[![janwilmake/dorm context](https://badge.forgithub.com/janwilmake/dorm/tree/main/template.ts)](https://uithub.com/janwilmake/dorm/tree/main/template.ts) [![](https://badge.xymake.com/janwilmake/status/1915415919335006432)](https://xymake.com/janwilmake/status/1915415919335006432)
 
 DORM makes building multi-tenant applications on Cloudflare **ridiculously easy** by letting you:
 
