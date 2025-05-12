@@ -36,6 +36,15 @@ npm i dormroom@next
 
 ...or fork this repo, and use [template.ts](https://github.com/janwilmake/dorm/blob/main/template.ts) as a starting point.
 
+### View your data with Outerbase Studio:
+
+Local Development:
+
+1. Install: https://github.com/outerbase/studio
+2. Connect to: http://localhost:8787/db
+
+Production: Use https://studio.outerbase.com
+
 ## 🔥 Top Use Cases
 
 ### 1. Multi-tenant SaaS applications
