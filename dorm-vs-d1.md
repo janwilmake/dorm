@@ -58,25 +58,6 @@
 - You need programmatic database creation
 - You want to integrate with Outerbase for data exploration
 
-## Cost Considerations
-
-**D1**:
-
-See [pricing page](https://developers.cloudflare.com/d1/platform/pricing/)
-
-- Free tier: 5GB storage, limited queries
-- Paid: $0.75/million rows read, $0.001/million rows written, $0.25/GB storage
-
-**DORM**:
-
-Charged as [Durable Objects](https://developers.cloudflare.com/durable-objects/platform/pricing/), which is similar to D1:
-
-- $0.15/million requests
-- $12.50/million GB-seconds duration
-- $0.25/GB storage per month
-- $0.001 / million rows read
-- $1.00 / million rows written
-
 ## Migration Path
 
 Both platforms use SQLite, making migration between them relatively straightforward. However:
