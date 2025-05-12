@@ -4,7 +4,10 @@
   "assets": { "directory": "./" },
   "compatibility_date": "2024-04-15",
   "dev": { "port": 3000 },
-  "route": { "custom_domain": true, "pattern": "dorm.wilmake.com" },
+  "routes": [
+    { "custom_domain": true, "pattern": "dorm.wilmake.com" },
+    { "custom_domain": true, "pattern": "demo.getdorm.com" }
+  ],
   "durable_objects": {
     "bindings": [{ "name": "DORM_NAMESPACE", "class_name": "DORM" }]
   },

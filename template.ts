@@ -170,6 +170,7 @@ export default {
         migrations: {
           // initial version
           1: jsonSchemaToSql(todoSchema).concat(jsonSchemaToSql(tenantSchema)),
+          2: [`ALTER TABLE todos CREATE COLUMN login TEXT`],
           // we can alter the tables by adding migrations here
         },
         ctx: ctx, // Pass execution context for waitUntil

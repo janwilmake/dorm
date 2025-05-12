@@ -2,8 +2,6 @@
 
 ## POST (launch sunday or monday, 6pm)
 
-Update docs about the migrations.
-
 [video:dorm1demo]
 
 Prerelease: DORM 1.0.0-next. What's new?
