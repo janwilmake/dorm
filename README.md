@@ -41,7 +41,7 @@ npm i dormroom@next
 Local Development:
 
 1. Install: https://github.com/outerbase/studio
-2. Connect to: http://localhost:8787/db
+2. Create starbase connecting to: http://localhost:8787/db (or your port, your prefix)
 
 Production: Use https://studio.outerbase.com
 
