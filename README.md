@@ -155,16 +155,54 @@ const middlewareResponse = await client.middleware(request, {
 });
 ```
 
+### Extending DORM
+
+You can extend DORM with your own DO implementation to circumvent limitations doing single queries remotely gives you.
+
+```ts
+export class YourDO extends DORM {
+  private storage: DurableObjectStorage;
+  public env: Env;
+
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+    this.env = env;
+    this.storage = state.storage;
+    //... your additional construction
+  }
+
+  private myExtendedFunction() {
+    return "Hello, World!";
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    // Effectively makes this DO a DORM-capable DO!
+    // Please note, handleExecRequest comes from the DORM DO but needs to be in your fetch!
+    if (path === "/query/raw" && request.method === "POST") {
+      return await this.handleExecRequest(request);
+    }
+
+    return new Response(this.myExtendedFunction());
+  }
+}
+```
+
+This allows:
+
+- Doing a multitude of SQL queries inside of your DO from a single API call
+- Using alarms and other features
+
 ## 📊 Performance & Limitations
 
 - ✅ **Nearly zero overhead**: Thin abstraction over DO's SQLite
 - ✅ **Edge-localized**: Data stored closest to where it's accessed
 - ✅ **Up to 10GB per DB**: Sufficient for most application needs
+- ❌ Because you execute your SQL queries from a remote resource, you will more quickly run into the max subrequests limitation of 1000 max subrequests (50 on Cloudflare free). Also you can't benefit from other primitives in your Durable Object you'd normally have like alarms and an infinite amount of subrequests. If this is too big a limitation, you can [extend DORM](#extending-dorm) to still benefit from the dorm primitives while also have all abilities of raw Durable Objects.
 - ❓ Localhost isn't easily accessible YET in https://studio.outerbase.com so you need to deploy first, [use a tunnel](https://dev.to/tahsin000/free-services-to-expose-localhost-to-https-a-comparison-5c19), or run the [outerbase client](https://github.com/outerbase/studio) on localhost.
 
 ## 🔗 Links & Resources
 
-- [X-OAuth Template using DORM](https://github.com/janwilmake/x-oauth-template)
+- [X-OAuth Template using DORM](https://github.com/janwilmake/x-dorm-template)
 - [Follow me on X](https://x.com/janwilmake) for updates
 - [Original project: ORM-DO](https://github.com/janwilmake/orm-do)
 - [Inspiration/used work - The convention outerbase uses](https://x.com/BraydenWilmoth/status/1902738849630978377) is reapplied to make the integration with outerbase work!

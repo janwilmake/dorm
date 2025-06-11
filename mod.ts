@@ -264,7 +264,9 @@ export function createClient(context: {
   }
 
   /**
-   * HTTP middleware for database access
+   * HTTP middleware for database access.
+   *
+   * NB: although it's async you can safely insert this as the async part only applies in the /query/raw endpoint
    */
   async function middleware(
     request: Request,
