@@ -12,9 +12,9 @@
  * - Integration with Outerbase for data exploration
  */
 
+import { DurableObject } from "cloudflare:workers";
 import {
   createClient,
-  DORM,
   DORMClient,
   jsonSchemaToSql,
   TableSchema,
@@ -50,11 +50,24 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   */
   type RemoteSqlStorageCursor,
   type Records,
+  Streamable,
+  Transfer,
   // NB: package name is: "dormroom" when installing as package
 } from "./mod";
 
+/** You can add any further routes inhere if needed, e.g. if you need to perform queries with js logic around it */
+@Streamable()
+export class DORM extends DurableObject {
+  transfer = new Transfer(this);
+  sql: SqlStorage;
+
+  constructor(state: DurableObjectState, env: any) {
+    super(state, env);
+    this.sql = state.storage.sql;
+  }
+}
+
 // Ensure to export your DO for it to be accessible
-export { DORM };
 
 export interface Env {
   DORM_NAMESPACE: DurableObjectNamespace<DORM>;

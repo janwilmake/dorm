@@ -10,7 +10,7 @@
 
 # DORM Changes
 
-💡 How transactions can be used: https://lmpify.com/httpsdevelopersc-vx7x1c0. Making a remote transaction possible would be very useful https://lmpify.com/httpsdevelopersc-3mptgo0. We MAY now be able to create a multi-DO transaction in DORM. See https://x.com/janwilmake/status/1926928095329587450 for potential feeback.
+💡 How transactions can be used: https://letmeprompt.com/httpsdevelopersc-vx7x1c0. Making a remote transaction possible would be very useful https://letmeprompt.com/httpsdevelopersc-3mptgo0. We MAY now be able to create a multi-DO transaction in DORM. See https://x.com/janwilmake/status/1926928095329587450 for potential feeback.
 
 If this works out, breaking change to DORM:
 

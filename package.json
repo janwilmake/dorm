@@ -1,6 +1,6 @@
 {
   "name": "dormroom",
-  "version": "1.0.0-next.21",
+  "version": "1.0.0-next.22",
   "files": [
     "mod.ts"
   ],
@@ -9,6 +9,7 @@
     "@cloudflare/workers-types": "^4.20250415.0"
   },
   "dependencies": {
-    "remote-sql-cursor": "^0.1.2"
+    "remote-sql-cursor": "^0.1.5",
+    "transferable-object": "^0.0.4"
   }
 }

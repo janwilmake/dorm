@@ -1,10 +1,13 @@
 //@ts-check
 /// <reference types="@cloudflare/workers-types" />
-// package name: "dormroom"
-import { env } from "cloudflare:workers";
-import { RemoteSqlStorageCursor, exec, DatabaseDO } from "remote-sql-cursor";
+import { DurableObject } from "cloudflare:workers";
+import { RemoteSqlStorageCursor, exec, Streamable } from "remote-sql-cursor";
 export { RemoteSqlStorageCursor };
-export class DORM extends DatabaseDO {}
+export { Streamable } from "remote-sql-cursor";
+export { Transfer } from "transferable-object";
+
+@Streamable()
+export class DORM extends DurableObject {}
 
 // Simple TypeScript types for JSON Schema (no dependency)
 export interface JSONSchema {
@@ -193,8 +196,8 @@ export type DORMClient = {
  * Creates a client for interacting with DORM
  * This is now an async function that initializes storage upfront
  */
-export function createClient(context: {
-  doNamespace: DurableObjectNamespace<DORM>;
+export function createClient<T extends Rpc.DurableObjectBranded>(context: {
+  doNamespace: DurableObjectNamespace<T>;
   version?: string;
   migrations?: { [version: number]: string[] };
   name?: string;
@@ -219,7 +222,7 @@ export function createClient(context: {
 
   // Get main stub
   const stub = doNamespace.get(doNamespace.idFromName(getName(name)), {
-    locationHint: locationHint,
+    locationHint,
   });
 
   // Get mirror stub if configured
@@ -294,7 +297,7 @@ export function createClient(context: {
     const subPath = url.pathname.substring(prefix.length);
 
     // Check if this middleware should handle the request
-    if (subPath !== "/query/raw") {
+    if (subPath !== "/query/raw" && subPath !== "/query/stream") {
       // not this middleware
       return;
     }
@@ -345,220 +348,201 @@ export function createClient(context: {
       }
     }
 
+    if (subPath === "/query/stream" && request.method === "POST") {
+      const data = (await request.json()) as {
+        sql?: string;
+        params?: any[];
+        transaction?: { sql: string; params: any[] }[];
+        skipMirror?: boolean;
+      };
+      // Check for transactions with streaming (not supported)
+      if (data.transaction) {
+        return new Response(
+          JSON.stringify({
+            error: "Transactions are not supported with streaming responses",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // For streaming responses
+      if (!data.sql) {
+        return new Response(JSON.stringify({ error: "Missing SQL query" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Forward the request to the DO and pipe the response directly
+      const doResponse = await stub.fetch(
+        new Request("http://internal/query/stream", {
+          method: "POST",
+          body: JSON.stringify({
+            query: data.sql,
+            bindings: data.params || [],
+          }),
+        }),
+      );
+
+      // Handle mirroring if needed
+      if (!data.skipMirror && mirrorStub && ctx) {
+        const mirrorPromise = async () => {
+          try {
+            await exec(
+              mirrorStub,
+              migrations,
+              data.sql!,
+              ...(data.params || []),
+            ).toArray();
+          } catch (error) {
+            console.error("Mirror execution error in streaming:", error);
+          }
+        };
+
+        ctx.waitUntil(mirrorPromise());
+      }
+
+      // Return the streaming response
+      return new Response(doResponse.body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/x-ndjson",
+          "Transfer-Encoding": "chunked",
+        },
+      });
+    }
+
     // Handle SQL query with appropriate response format
+    // TODO: Potentially can be replaced by Browsable to stay 1:1 with Cloudflare Outerbase Implementation/standard
     if (subPath === "/query/raw" && request.method === "POST") {
       try {
         const data = (await request.json()) as {
           sql?: string;
           params?: any[];
           transaction?: { sql: string; params: any[] }[];
-          skipMirror?: boolean;
         };
 
-        const acceptHeader =
-          request.headers.get("Accept") || "application/json";
-        const wantsStreaming = acceptHeader.includes("application/x-ndjson");
+        // For standard JSON responses
+        if (data.sql) {
+          // Single query
+          const cursor = execWithMirroring(data.sql, ...(data.params || []));
 
-        // Check for transactions with streaming (not supported)
-        if (wantsStreaming && data.transaction) {
+          const rows = Array.from(await cursor.raw());
+
+          const result = {
+            columns: cursor.columnNames,
+            rows,
+            meta: {
+              rows_read: cursor.rowsRead,
+              rows_written: cursor.rowsWritten,
+            },
+          };
+
+          return new Response(JSON.stringify({ result }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } else if (data.transaction) {
+          // Properly handle full transaction
+          if (
+            !Array.isArray(data.transaction) ||
+            data.transaction.length === 0
+          ) {
+            return new Response(
+              JSON.stringify({
+                error: "Invalid transaction format or empty transaction",
+              }),
+              {
+                status: 400,
+                headers: {
+                  ...corsHeaders,
+                  "Content-Type": "application/json",
+                },
+              },
+            );
+          }
+
+          const results: any[] = [];
+          let success = true;
+
+          try {
+            // Execute each statement in the transaction
+            for (const txQuery of data.transaction) {
+              if (!txQuery || !txQuery.sql) {
+                throw new Error("Invalid transaction statement format");
+              }
+
+              const cursor = execWithMirroring(
+                txQuery.sql,
+                ...(txQuery.params || []),
+              );
+
+              const rows = Array.from(await cursor.raw());
+
+              results.push({
+                columns: cursor.columnNames,
+                rows,
+                meta: {
+                  rows_read: cursor.rowsRead,
+                  rows_written: cursor.rowsWritten,
+                },
+              });
+            }
+
+            // Handle mirroring of the transaction if needed
+            if (mirrorStub && ctx) {
+              const mirrorPromise = async () => {
+                try {
+                  //   await exec(mirrorStub, "BEGIN TRANSACTION").toArray();
+
+                  for (const txQuery of data.transaction!) {
+                    await exec(
+                      mirrorStub,
+                      migrations,
+                      txQuery.sql,
+                      ...(txQuery.params || []),
+                    ).toArray();
+                  }
+
+                  //   await exec(mirrorStub, "COMMIT").toArray();
+                } catch (error) {
+                  console.error("Mirror transaction error:", error);
+                  try {
+                    //  await exec(mirrorStub, "ROLLBACK").toArray();
+                  } catch (rollbackError) {
+                    console.error("Mirror rollback error:", rollbackError);
+                  }
+                }
+              };
+
+              ctx.waitUntil(mirrorPromise());
+            }
+          } catch (error) {
+            // Rollback on any error
+            success = false;
+            try {
+            } catch (rollbackError) {
+              console.error("Rollback error:", rollbackError);
+            }
+            throw error;
+          }
+
           return new Response(
-            JSON.stringify({
-              error: "Transactions are not supported with streaming responses",
-            }),
+            JSON.stringify({ result: results, transaction: { success } }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        } else {
+          return new Response(
+            JSON.stringify({ error: "Missing SQL query or transaction" }),
             {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
-        }
-
-        // For standard JSON responses
-        if (!wantsStreaming) {
-          if (data.sql) {
-            // Single query
-            const cursor = data.skipMirror
-              ? exec(stub, migrations, data.sql, ...(data.params || []))
-              : execWithMirroring(data.sql, ...(data.params || []));
-
-            const rows = Array.from(await cursor.raw());
-
-            const result = {
-              columns: cursor.columnNames,
-              rows,
-              meta: {
-                rows_read: cursor.rowsRead,
-                rows_written: cursor.rowsWritten,
-              },
-            };
-
-            return new Response(JSON.stringify({ result }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          } else if (data.transaction) {
-            // Properly handle full transaction
-            if (
-              !Array.isArray(data.transaction) ||
-              data.transaction.length === 0
-            ) {
-              return new Response(
-                JSON.stringify({
-                  error: "Invalid transaction format or empty transaction",
-                }),
-                {
-                  status: 400,
-                  headers: {
-                    ...corsHeaders,
-                    "Content-Type": "application/json",
-                  },
-                },
-              );
-            }
-
-            // Begin transaction
-            //   await exec(stub, "BEGIN TRANSACTION").toArray();
-
-            const results: any[] = [];
-            let success = true;
-
-            try {
-              // Execute each statement in the transaction
-              for (const txQuery of data.transaction) {
-                if (!txQuery || !txQuery.sql) {
-                  throw new Error("Invalid transaction statement format");
-                }
-
-                const cursor = data.skipMirror
-                  ? exec(
-                      stub,
-                      migrations,
-                      txQuery.sql,
-                      ...(txQuery.params || []),
-                    )
-                  : execWithMirroring(txQuery.sql, ...(txQuery.params || []));
-
-                const rows = Array.from(await cursor.raw());
-
-                results.push({
-                  columns: cursor.columnNames,
-                  rows,
-                  meta: {
-                    rows_read: cursor.rowsRead,
-                    rows_written: cursor.rowsWritten,
-                  },
-                });
-              }
-
-              // Commit transaction on success
-              //  await exec(stub, "COMMIT").toArray();
-
-              // Handle mirroring of the transaction if needed
-              if (!data.skipMirror && mirrorStub && ctx) {
-                const mirrorPromise = async () => {
-                  try {
-                    //   await exec(mirrorStub, "BEGIN TRANSACTION").toArray();
-
-                    for (const txQuery of data.transaction!) {
-                      await exec(
-                        mirrorStub,
-                        migrations,
-                        txQuery.sql,
-                        ...(txQuery.params || []),
-                      ).toArray();
-                    }
-
-                    //   await exec(mirrorStub, "COMMIT").toArray();
-                  } catch (error) {
-                    console.error("Mirror transaction error:", error);
-                    try {
-                      //  await exec(mirrorStub, "ROLLBACK").toArray();
-                    } catch (rollbackError) {
-                      console.error("Mirror rollback error:", rollbackError);
-                    }
-                  }
-                };
-
-                ctx.waitUntil(mirrorPromise());
-              }
-            } catch (error) {
-              // Rollback on any error
-              success = false;
-              try {
-                //   await exec(stub, "ROLLBACK").toArray();
-              } catch (rollbackError) {
-                console.error("Rollback error:", rollbackError);
-              }
-              throw error;
-            }
-
-            return new Response(
-              JSON.stringify({
-                result: results,
-                transaction: { success },
-              }),
-              {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-          } else {
-            return new Response(
-              JSON.stringify({ error: "Missing SQL query or transaction" }),
-              {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-          }
-        }
-
-        // For streaming responses
-        if (wantsStreaming) {
-          if (!data.sql) {
-            return new Response(
-              JSON.stringify({ error: "Missing SQL query" }),
-              {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-          }
-
-          // Forward the request to the DO and pipe the response directly
-          const doResponse = await stub.fetch(
-            new Request("http://internal/query/raw", {
-              method: "POST",
-              body: JSON.stringify({
-                query: data.sql,
-                bindings: data.params || [],
-              }),
-            }),
-          );
-
-          // Handle mirroring if needed
-          if (!data.skipMirror && mirrorStub && ctx) {
-            const mirrorPromise = async () => {
-              try {
-                await exec(
-                  mirrorStub,
-                  migrations,
-                  data.sql!,
-                  ...(data.params || []),
-                ).toArray();
-              } catch (error) {
-                console.error("Mirror execution error in streaming:", error);
-              }
-            };
-
-            ctx.waitUntil(mirrorPromise());
-          }
-
-          // Return the streaming response
-          return new Response(doResponse.body, {
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/x-ndjson",
-              "Transfer-Encoding": "chunked",
-            },
-          });
         }
       } catch (error: any) {
         return new Response(
