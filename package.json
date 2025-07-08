@@ -1,6 +1,6 @@
 {
   "name": "dormroom",
-  "version": "1.0.0-next.25",
+  "version": "1.0.0-next.27",
   "files": [
     "mod.ts"
   ],
@@ -11,6 +11,7 @@
   "dependencies": {
     "migratable-object": "^0.0.8",
     "multistub": "^0.0.3",
+    "multistub-query": "^0.0.1",
     "remote-sql-cursor": "^0.1.9",
     "transferable-object": "^0.0.4"
   }

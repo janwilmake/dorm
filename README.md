@@ -250,9 +250,10 @@ This allows:
 - [Inspiration/used work - The convention outerbase uses](https://x.com/BraydenWilmoth/status/1902738849630978377) is reapplied to make the integration with outerbase work!
 - [Original idea](https://x.com/janwilmake/status/1884548509723983938) for mirroring
 - [DORM uses a 'remote sql cursor' at its core - see repo+post here](https://x.com/janwilmake/status/1920274164889354247)
+- [v1.0.0@next-25 - Breaking change - July 8, 2025](https://x.com/janwilmake/status/1942557388210368845)
 
 ## 🚧 Status: Beta
 
-DORM is currently in beta. API may change, but core functionality is stable.
+DORM is currently in beta. API may change!
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/janwilmake/dorm)
