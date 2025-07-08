@@ -16,7 +16,6 @@ import { DurableObject } from "cloudflare:workers";
 import {
   createClient,
   DORMClient,
-  jsonSchemaToSql,
   TableSchema,
 
   /*
@@ -48,24 +47,12 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   [Symbol.asyncIterator](): AsyncIterableIterator<T>;
 }
   */
-  type RemoteSqlStorageCursor,
   type Records,
-  Streamable,
-  Transfer,
   // NB: package name is: "dormroom" when installing as package
 } from "./mod";
-
-/** You can add any further routes inhere if needed, e.g. if you need to perform queries with js logic around it */
-@Streamable()
-export class DORM extends DurableObject {
-  transfer = new Transfer(this);
-  sql: SqlStorage;
-
-  constructor(state: DurableObjectState, env: any) {
-    super(state, env);
-    this.sql = state.storage.sql;
-  }
-}
+import { Streamable } from "remote-sql-cursor";
+import { Transfer } from "transferable-object";
+import { Migratable } from "migratable-object";
 
 // Ensure to export your DO for it to be accessible
 
@@ -85,50 +72,42 @@ interface Todo extends Records {
   tenant_id: string;
 }
 
-interface Tenant extends Records {
-  id: string;
+@Migratable({
+  migrations: {
+    // Create tenants table
+    1: [
+      `CREATE TABLE IF NOT EXISTS tenants (
+      id TEXT PRIMARY KEY
+    )`,
+    ],
+    // Create todos table
+    2: [
+      `CREATE TABLE IF NOT EXISTS todos (
+      id TEXT PRIMARY KEY,
+      text TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      tenant_id TEXT NOT NULL
+    )`,
+    ],
+    // Add any future migrations here
+    // 3: [`ALTER TABLE todos ADD COLUMN priority INTEGER DEFAULT 0`],
+  },
+})
+@Streamable()
+export class DORM extends DurableObject {
+  transfer = new Transfer(this);
+  sql: SqlStorage;
+
+  constructor(state: DurableObjectState, env: any) {
+    super(state, env);
+    this.sql = state.storage.sql;
+  }
+
+  getDatabaseSize() {
+    return this.sql.databaseSize;
+  }
 }
-
-// JSON Schema definition for tenants table
-const tenantSchema: TableSchema = {
-  $id: "tenants", // Table name
-  type: "object",
-  properties: {
-    id: {
-      type: "string",
-      "x-dorm-primary-key": true, // Primary key constraint
-    },
-  },
-  required: ["id"], // NOT NULL constraints
-};
-
-// JSON Schema definition for Todo table
-const todoSchema: TableSchema = {
-  $id: "todos", // Table name
-  type: "object",
-  properties: {
-    id: {
-      type: "string",
-      "x-dorm-primary-key": true, // Primary key constraint
-    },
-    text: {
-      type: "string",
-      maxLength: 500,
-    },
-    completed: {
-      type: "integer",
-      "x-dorm-default": 0,
-    },
-    created_at: {
-      type: "string",
-      format: "date-time",
-    },
-    tenant_id: {
-      type: "string",
-    },
-  },
-  required: ["id", "text", "tenant_id"], // NOT NULL constraints
-};
 
 export default {
   async fetch(
@@ -165,28 +144,22 @@ export default {
       // Get tenant ID from the first segment of the path
       const tenantId = pathSegments[0];
 
-      const connection =
+      const configs =
         tenantId === "aggregate"
           ? // Show the aggregate DB. Warning: Writes won't be mirrored to tenant dbs for this connection
-            { name: "aggregate" }
-          : {
+            [{ name: "aggregate" }]
+          : [
               // Shard by tenant ID
-              name: `tenant:${tenantId}`,
+              { name: `tenant:${tenantId}` },
               // Query execution mirroring to a central aggregate database.
-              mirrorName: "aggregate",
-            };
+              { name: "aggregate" },
+            ];
 
       // Create a database client for the specified tenant
-      const client: DORMClient = createClient({
+      const client: DORMClient<DORM> = createClient({
         doNamespace: env.DORM_NAMESPACE,
-        version: "v2", // Version prefix for migrations
-        migrations: {
-          // initial version
-          1: jsonSchemaToSql(todoSchema).concat(jsonSchemaToSql(tenantSchema)),
-          // we can alter the tables by adding migrations here
-        },
         ctx: ctx, // Pass execution context for waitUntil
-        ...connection,
+        configs,
       });
 
       // Ensure tenant exists in the tenants table
@@ -213,40 +186,6 @@ export default {
       // Extract the subpath (path without tenant)
       const subPath =
         pathSegments.length > 1 ? "/" + pathSegments.slice(1).join("/") : "/";
-
-      // If subPath is specifically /stats or /api/db, handle those routes
-      if (subPath === "/stats") {
-        // Get database size
-        const dbSize = await client.getDatabaseSize();
-
-        // Get mirror database size if available
-        const mirrorSize = await client.getMirrorDatabaseSize();
-
-        // Get tenant info
-        const tenantInfo = await client
-          .exec<{ tenant_id: string; todos_count: number }>(
-            `SELECT ? as tenant_id, COUNT(*) as todos_count FROM todos WHERE tenant_id = ?`,
-            tenantId,
-            tenantId,
-          )
-          .one();
-
-        return new Response(
-          JSON.stringify(
-            {
-              tenant: tenantId,
-              dbSize: `${(dbSize / 1024 / 1024).toFixed(2)} MB`,
-              mirrorSize: mirrorSize
-                ? `${(mirrorSize / 1024 / 1024).toFixed(2)} MB`
-                : "N/A",
-              tenantInfo,
-            },
-            null,
-            2,
-          ),
-          { headers: { "Content-Type": "application/json" } },
-        );
-      }
 
       if (tenantId === "aggregate") {
         return new Response("Not allowed", { status: 401 });
@@ -627,7 +566,6 @@ export default {
             <div class="links">
               <h2>Resources & Tools</h2>
               <div class="links-container">
-                <a href="/${tenantId}/stats" target="_blank">Database Stats</a>
                 <a href="${`https://studio.outerbase.com/local/new-base/starbase?url=${encodeURIComponent(
                   new URL(`/${tenantId}/api/db`, request.url).href,
                 )}&type=internal&access-key=my-secret-key`}" target="_blank">Open in Outerbase</a>

@@ -50,7 +50,7 @@ npm i dormroom@next
 Local Development:
 
 1. Install: https://github.com/outerbase/studio
-2. Create starbase connecting to: http://localhost:8787/db (or your port, your prefix)
+2. Create starbase connecting to: http://localhost:8787/{tenant}/api/db (or your port, your prefix)
 
 Production: Use https://studio.outerbase.com
 
@@ -62,14 +62,12 @@ Create a separate database for each customer/organization:
 
 ```typescript
 const client = createClient({
-  doNamespace: env.MY_DO_NAMESPACE,
-  version: "v1",
-  name: `tenant:${tenantId}`, // One DB per tenant
-  migrations: {
-    1: [
-      /* Your sql statements to create tables or alter them. Migrations are applied just once. */
-    ],
-  },
+  doNamespace: env.DORM_NAMESPACE,
+  ctx: ctx,
+  configs: [
+    { name: `tenant:${tenantId}` }, // One DB per tenant
+    { name: "aggregate" }, // Optional: Mirror to aggregate DB
+  ],
 });
 ```
 
@@ -79,9 +77,11 @@ Store user data closest to where they access it:
 
 ```typescript
 const client = createClient({
-  doNamespace: env.MY_DO_NAMESPACE,
-  version: "v1",
-  name: `user:${userId}`, // One DB per user
+  doNamespace: env.DORM_NAMESPACE,
+  ctx: ctx,
+  configs: [
+    { name: `user:${userId}` }, // One DB per user
+  ],
 });
 ```
 
@@ -91,9 +91,12 @@ Mirror tenant operations to a central database for analytics:
 
 ```typescript
 const client = createClient({
-  doNamespace: env.MY_DO_NAMESPACE,
-  name: `tenant:${tenantId}`,
-  mirrorName: "aggregate", // Mirror operations to an aggregate DB
+  doNamespace: env.DORM_NAMESPACE,
+  ctx: ctx,
+  configs: [
+    { name: `tenant:${tenantId}` }, // Main DB
+    { name: "aggregate" }, // Mirror operations to aggregate DB
+  ],
 });
 ```
 
@@ -109,11 +112,40 @@ When creating mirrors, be wary of naming collisions and database size:
 - **Outerbase integration**: Explore and manage your data with built-in tools
 - **JSON Schema support**: Define tables using JSON Schema with automatic SQL translation
 - **Streaming queries**: Efficient cursor implementation for large result sets
-- **JIT Migrations**: Migrations are applied when needed, just once, right before a DO gets accessed.
+- **JIT Migrations**: Migrations are applied when needed, just once, right before a DO gets accessed (via `@Migratable`)
 - **Data mirroring**: Mirror operations to aggregate databases for analytics
 - **Low verbosity**: Clean API that hides Durable Object complexity
 
 ## 🛠️ Advanced Features
+
+### Setting up your Durable Object with Migrations
+
+```typescript
+import { Migratable } from "migratable-object";
+import { Streamable } from "remote-sql-cursor";
+import { Transfer } from "transferable-object";
+
+@Migratable({
+  migrations: {
+    1: [`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)`],
+    2: [`ALTER TABLE users ADD COLUMN email TEXT`],
+  },
+})
+@Streamable()
+export class DORM extends DurableObject {
+  transfer = new Transfer(this);
+  sql: SqlStorage;
+
+  constructor(state: DurableObjectState, env: any) {
+    super(state, env);
+    this.sql = state.storage.sql;
+  }
+
+  getDatabaseSize() {
+    return this.sql.databaseSize;
+  }
+}
+```
 
 ### JSONSchema to SQL Conversion
 
@@ -143,6 +175,9 @@ const cursor = client.exec<UserRecord>("SELECT * FROM users");
 for await (const user of cursor) {
   // Process each user individually
 }
+
+// Or get all results at once
+const allUsers = await cursor.toArray();
 ```
 
 ### REST API for Data Access
@@ -153,36 +188,43 @@ const middlewareResponse = await client.middleware(request, {
   prefix: "/api/db",
   secret: "my-secret-key",
 });
+
+if (middlewareResponse) {
+  return middlewareResponse;
+}
 ```
 
 ### Extending DORM
 
 You can extend DORM with your own DO implementation to circumvent limitations doing single queries remotely gives you.
 
-```ts
-export class YourDO extends DORM {
-  private storage: DurableObjectStorage;
-  public env: Env;
+```typescript
+@Migratable({
+  migrations: {
+    1: [`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)`],
+  },
+})
+@Streamable()
+export class YourDO extends DurableObject {
+  transfer = new Transfer(this);
+  sql: SqlStorage;
 
-  constructor(state: DurableObjectState, env: Env) {
+  constructor(state: DurableObjectState, env: any) {
     super(state, env);
-    this.env = env;
-    this.storage = state.storage;
-    //... your additional construction
+    this.sql = state.storage.sql;
   }
 
-  private myExtendedFunction() {
-    return "Hello, World!";
+  async myExtendedFunction() {
+    // Multiple queries in one transaction
+    const users = await this.sql.exec("SELECT * FROM users").toArray();
+    const count = await this.sql
+      .exec("SELECT COUNT(*) as count FROM users")
+      .one();
+    return { users, count };
   }
 
-  async fetch(request: Request): Promise<Response> {
-    // Effectively makes this DO a DORM-capable DO!
-    // Please note, handleExecRequest comes from the DORM DO but needs to be in your fetch!
-    if (path === "/query/raw" && request.method === "POST") {
-      return await this.handleExecRequest(request);
-    }
-
-    return new Response(this.myExtendedFunction());
+  getDatabaseSize() {
+    return this.sql.databaseSize;
   }
 }
 ```
@@ -191,6 +233,7 @@ This allows:
 
 - Doing a multitude of SQL queries inside of your DO from a single API call
 - Using alarms and other features
+- Complex transactions
 
 ## 📊 Performance & Limitations
 

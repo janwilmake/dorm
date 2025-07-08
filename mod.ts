@@ -1,13 +1,7 @@
 //@ts-check
 /// <reference types="@cloudflare/workers-types" />
-import { DurableObject } from "cloudflare:workers";
-import { RemoteSqlStorageCursor, exec, Streamable } from "remote-sql-cursor";
-export { RemoteSqlStorageCursor };
-export { Streamable } from "remote-sql-cursor";
-export { Transfer } from "transferable-object";
-
-@Streamable()
-export class DORM extends DurableObject {}
+import { RemoteSqlStorageCursor, SqlStorageRow, exec } from "remote-sql-cursor";
+import { getMultiStub, getStubs, MultiStubConfig } from "multistub";
 
 // Simple TypeScript types for JSON Schema (no dependency)
 export interface JSONSchema {
@@ -173,24 +167,63 @@ export type OrmProviderFn<T> = (
   ) => RemoteSqlStorageCursor<R>,
 ) => T;
 
-export type DORMClient = {
-  exec: <
-    T extends {
-      [x: string]: SqlStorageValue;
-    } = {
-      [x: string]: SqlStorageValue;
-    },
-  >(
+export type DORMClient<T extends Rpc.DurableObjectBranded> = {
+  /** Remote SQL query that executes any query in both your main DO and the mirror */
+  exec: <T extends SqlStorageRow>(
     sql: string,
     ...params: any[]
   ) => RemoteSqlStorageCursor<T>;
+  /** A stub linked to both your main DO and mirror DO for executing any RPC function on both and retrieving the response only from the first */
+  stub: T;
+  /** Middleware to expose exec to be browsable (e.g. for Outerbase) */
   middleware: (
     request: Request,
     options?: MiddlewareOptions,
   ) => Promise<Response | undefined>;
-  getDatabaseSize: () => Promise<number>;
-  getMirrorDatabaseSize: () => Promise<number | undefined>;
 };
+
+/**
+ * Execute SQL query in the client's DO, with mirroring support.
+ * This is now synchronous but handles mirroring in the background.
+ */
+export function multiquery<T extends SqlStorageRow>(
+  doNamespace: DurableObjectNamespace<any>,
+  ctx: ExecutionContext,
+  configs: MultiStubConfig[],
+  sql: string,
+  ...params: any[]
+): RemoteSqlStorageCursor<T> {
+  const stubs = getStubs(doNamespace, configs); // Main stub is the first one
+  const [mainStub, ...mirrorStubs] = stubs;
+  const cursor = exec<T>(mainStub, sql, ...params);
+
+  // Execute on mirrors if configured and initialized
+  if (mirrorStubs.length > 0 && ctx) {
+    const mirrorPromise = async () => {
+      try {
+        // Execute the same query on all mirrors
+        await Promise.all(
+          mirrorStubs.map(async (mirrorStub) => {
+            try {
+              for await (const _ of exec(mirrorStub, sql, ...params)) {
+                // Do nothing, just ensure it's processed
+              }
+            } catch (error) {
+              console.error("Mirror execution error:", error);
+            }
+          }),
+        );
+      } catch (error) {
+        console.error("Mirror execution error:", error);
+      }
+    };
+
+    // Use waitUntil if context provided, otherwise fire and forget
+    ctx.waitUntil(mirrorPromise());
+  }
+
+  return cursor;
+}
 
 /**
  * Creates a client for interacting with DORM
@@ -198,73 +231,19 @@ export type DORMClient = {
  */
 export function createClient<T extends Rpc.DurableObjectBranded>(context: {
   doNamespace: DurableObjectNamespace<T>;
-  version?: string;
-  migrations?: { [version: number]: string[] };
-  name?: string;
-  locationHint?: DurableObjectLocationHint;
-  mirrorName?: string;
-  ctx?: ExecutionContext;
-  mirrorLocationHint?: DurableObjectLocationHint;
-}): DORMClient {
-  const {
-    doNamespace,
-    migrations,
-    ctx,
-    locationHint,
-    mirrorLocationHint,
-    mirrorName,
-    name,
-    version,
-  } = context;
-  // Generate name with optional version
-  const getName = (name: string = "root"): string =>
-    version ? `${version}-${name}` : name;
-
-  // Get main stub
-  const stub = doNamespace.get(doNamespace.idFromName(getName(name)), {
-    locationHint,
-  });
-
-  // Get mirror stub if configured
-  const mirrorStub = mirrorName
-    ? doNamespace.get(doNamespace.idFromName(getName(mirrorName)), {
-        locationHint: mirrorLocationHint,
-      })
-    : undefined;
-
-  /**
-   * Execute SQL query in the client's DO, with mirroring support.
-   * This is now synchronous but handles mirroring in the background.
-   */
-  function execWithMirroring<
-    T extends {
-      [x: string]: SqlStorageValue;
-    } = {
-      [x: string]: SqlStorageValue;
-    },
-  >(sql: string, ...params: any[]): RemoteSqlStorageCursor<T> {
-    // Execute query on main stub
-    const cursor = exec<T>(stub, migrations, sql, ...params);
-
-    // Execute on mirror if configured and initialized
-    if (mirrorStub && ctx) {
-      const mirrorPromise = async () => {
-        try {
-          // Execute the same query on the mirror
-          for await (const _ of exec(mirrorStub, migrations, sql, ...params)) {
-            // Do nothing, just ensure it's processed
-          }
-        } catch (error) {
-          console.error("Mirror execution error:", error);
-        }
-      };
-
-      // Use waitUntil if context provided, otherwise fire and forget
-      ctx.waitUntil(mirrorPromise());
-    }
-
-    return cursor;
+  ctx: ExecutionContext;
+  configs: MultiStubConfig[];
+}): DORMClient<T> {
+  const { doNamespace, ctx, configs } = context;
+  if (!configs || configs.length === 0) {
+    throw new Error("At least one DO configuration is required");
   }
+  const multistub = getMultiStub<T>(doNamespace, configs, ctx);
+  const [mainStub, ...mirrorStubs] = getStubs(doNamespace, configs);
+  const execWithMirroring = <T extends SqlStorageRow>(
+    sql: string,
+    ...params: any[]
+  ) => multiquery<T>(doNamespace, ctx, configs, sql, ...params);
 
   /**
    * HTTP middleware for database access.
@@ -377,7 +356,7 @@ export function createClient<T extends Rpc.DurableObjectBranded>(context: {
       }
 
       // Forward the request to the DO and pipe the response directly
-      const doResponse = await stub.fetch(
+      const doResponse = await mainStub.fetch(
         new Request("http://internal/query/stream", {
           method: "POST",
           body: JSON.stringify({
@@ -388,15 +367,22 @@ export function createClient<T extends Rpc.DurableObjectBranded>(context: {
       );
 
       // Handle mirroring if needed
-      if (!data.skipMirror && mirrorStub && ctx) {
+      if (!data.skipMirror && mirrorStubs.length > 0 && ctx) {
         const mirrorPromise = async () => {
           try {
-            await exec(
-              mirrorStub,
-              migrations,
-              data.sql!,
-              ...(data.params || []),
-            ).toArray();
+            await Promise.all(
+              mirrorStubs.map(async (mirrorStub) => {
+                try {
+                  await exec(
+                    mirrorStub,
+                    data.sql!,
+                    ...(data.params || []),
+                  ).toArray();
+                } catch (error) {
+                  console.error("Mirror execution error in streaming:", error);
+                }
+              }),
+            );
           } catch (error) {
             console.error("Mirror execution error in streaming:", error);
           }
@@ -492,28 +478,26 @@ export function createClient<T extends Rpc.DurableObjectBranded>(context: {
             }
 
             // Handle mirroring of the transaction if needed
-            if (mirrorStub && ctx) {
+            if (mirrorStubs.length > 0 && ctx) {
               const mirrorPromise = async () => {
                 try {
-                  //   await exec(mirrorStub, "BEGIN TRANSACTION").toArray();
-
-                  for (const txQuery of data.transaction!) {
-                    await exec(
-                      mirrorStub,
-                      migrations,
-                      txQuery.sql,
-                      ...(txQuery.params || []),
-                    ).toArray();
-                  }
-
-                  //   await exec(mirrorStub, "COMMIT").toArray();
+                  await Promise.all(
+                    mirrorStubs.map(async (mirrorStub) => {
+                      try {
+                        for (const txQuery of data.transaction!) {
+                          await exec(
+                            mirrorStub,
+                            txQuery.sql,
+                            ...(txQuery.params || []),
+                          ).toArray();
+                        }
+                      } catch (error) {
+                        console.error("Mirror transaction error:", error);
+                      }
+                    }),
+                  );
                 } catch (error) {
                   console.error("Mirror transaction error:", error);
-                  try {
-                    //  await exec(mirrorStub, "ROLLBACK").toArray();
-                  } catch (rollbackError) {
-                    console.error("Mirror rollback error:", rollbackError);
-                  }
                 }
               };
 
@@ -522,10 +506,6 @@ export function createClient<T extends Rpc.DurableObjectBranded>(context: {
           } catch (error) {
             // Rollback on any error
             success = false;
-            try {
-            } catch (rollbackError) {
-              console.error("Rollback error:", rollbackError);
-            }
             throw error;
           }
 
@@ -561,31 +541,9 @@ export function createClient<T extends Rpc.DurableObjectBranded>(context: {
     return undefined;
   }
 
-  /**
-   * Get database size
-   */
-  async function getDatabaseSize(): Promise<number> {
-    return Number(
-      await stub.fetch("http://internal/").then((res) => res.text()),
-    );
-  }
-
-  /**
-   * Get mirror database size if available
-   */
-  async function getMirrorDatabaseSize(): Promise<number | undefined> {
-    if (mirrorStub) {
-      return Number(
-        await mirrorStub.fetch("http://internal/").then((res) => res.text()),
-      );
-    }
-    return undefined;
-  }
-
   return {
+    stub: multistub,
     exec: execWithMirroring,
     middleware,
-    getDatabaseSize,
-    getMirrorDatabaseSize,
   };
 }
