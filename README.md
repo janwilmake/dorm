@@ -102,9 +102,9 @@ const client = createClient({
 
 When creating mirrors, be wary of naming collisions and database size:
 
-- **Unique id collisions**: when you use auto-increment and unique IDs (or columns in general), you may run into the issue that the value is unique in the main DB, but not in the mirror. This is currently not handled and your mirror query will silently fail! To prevent this issue I recommend not using auto increment or random in the query, and generate unique IDs beforehand when doing a query, so the data remains the same.
+- **Auto increment drift**: when you use auto-increment and unique IDs (or columns in general), you may run into the issue that the value will be different in the aggregate DB. This causes things to drift apart! To prevent this issue I recommend not using auto increment or random in the query, and generate unique IDs beforehand when doing a query, so the data remains the same.
 
-- **Size**: You have max 10GB. When executing a query, you can choose to use `skipMirror:true` to not perform the same query in the mirror db, to save on size for DBs with larger tables.
+- **Size**: You have max 10GB. When you chose to use an aggregate DB of some sort, ensure to keep this in mind.
 
 ## ✨ Key Features
 
@@ -240,7 +240,6 @@ This allows:
 - ✅ **Nearly zero overhead**: Thin abstraction over DO's SQLite
 - ✅ **Edge-localized**: Data stored closest to where it's accessed
 - ✅ **Up to 10GB per DB**: Sufficient for most application needs
-- ❌ Because you execute your SQL queries from a remote resource, you will more quickly run into the max subrequests limitation of 1000 max subrequests (50 on Cloudflare free). Also you can't benefit from other primitives in your Durable Object you'd normally have like alarms and an infinite amount of subrequests. If this is too big a limitation, you can [extend DORM](#extending-dorm) to still benefit from the dorm primitives while also have all abilities of raw Durable Objects.
 - ❓ Localhost isn't easily accessible YET in https://studio.outerbase.com so you need to deploy first, [use a tunnel](https://dev.to/tahsin000/free-services-to-expose-localhost-to-https-a-comparison-5c19), or run the [outerbase client](https://github.com/outerbase/studio) on localhost.
 
 ## 🔗 Links & Resources
