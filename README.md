@@ -29,15 +29,13 @@ See [Turso vs DORM](turso-vs-dorm.md) and [DORM vs D1](dorm-vs-d1.md) for a more
 
 ## 🚀 Quick Start
 
-Check out the [live TODO app demo](https://dorm.wilmake.com) showing multi-tenant capabilities.
-
-Install `dormroom` as dependency...
+Check out the [live demo](https://dorm.wilmake.com) showing multi-tenant capabilities.
 
 ```bash
 npm i dormroom@next
 ```
 
-...or fork this repo, and use [template.ts](https://github.com/janwilmake/dorm/blob/main/template.ts) as a starting point.
+DORM is built atop of modular primitives called 'Power Objects'. Check https://itscooldo.com for more information!
 
 | Summary                                            | Prompt it                                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -124,7 +122,6 @@ When creating mirrors, be wary of naming collisions and database size:
 ```typescript
 import { Migratable } from "migratable-object";
 import { Streamable } from "remote-sql-cursor";
-import { Transfer } from "transferable-object";
 
 @Migratable({
   migrations: {
@@ -134,7 +131,6 @@ import { Transfer } from "transferable-object";
 })
 @Streamable()
 export class DORM extends DurableObject {
-  transfer = new Transfer(this);
   sql: SqlStorage;
 
   constructor(state: DurableObjectState, env: any) {
@@ -207,7 +203,6 @@ You can extend DORM with your own DO implementation to circumvent limitations do
 })
 @Streamable()
 export class YourDO extends DurableObject {
-  transfer = new Transfer(this);
   sql: SqlStorage;
 
   constructor(state: DurableObjectState, env: any) {
