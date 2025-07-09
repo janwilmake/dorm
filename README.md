@@ -18,7 +18,7 @@ Perfect for SaaS applications, user profiles, rate limiting, or any case where y
 | Feature                                                  | Vanilla DOs         | **DORM** 🛏️             | D1          | Turso               |
 | -------------------------------------------------------- | ------------------- | ----------------------- | ----------- | ------------------- |
 | **Multi-tenant**                                         | ✅ Unlimited        | ✅ Unlimited            | ❌ One DB   | Pricey              |
-| **JS Logic where your DB is**<br>_(Never >1 round-trip)_ | ✅                  | ✅                      | ❌          | ❌                  |
+| **Run code where your DB is**<br>_(Never >1 round-trip)_ | ✅                  | ✅                      | ❌          | ❌                  |
 | **Query from worker**                                    | ❌ Only in DO       | ✅                      | ✅          | ✅                  |
 | **Data Explorer**                                        | ❌                  | ✅ Outerbase            | ✅          | ✅                  |
 | **Migrations**                                           | ❌                  | ✅                      | ✅          | ✅                  |
