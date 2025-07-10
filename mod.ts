@@ -1,5 +1,6 @@
 //@ts-check
 /// <reference types="@cloudflare/workers-types" />
+import { RemoteSqlStorageCursor, SqlStorageRow, exec } from "remote-sql-cursor";
 import { getMultiStub, getStubs, MultiStubConfig } from "multistub";
 import { multistubQuery } from "multistub-query";
 // Simple TypeScript types for JSON Schema (no dependency)
