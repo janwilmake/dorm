@@ -10,8 +10,9 @@
   },
   "dependencies": {
     "migratable-object": "^0.0.8",
-    "multistub": "^0.0.3",
+    "multistub": "^0.0.7",
     "multistub-query": "^0.0.1",
+    "queryable-object": "^0.0.1",
     "remote-sql-cursor": "^0.1.9",
     "transferable-object": "^0.0.4"
   }
