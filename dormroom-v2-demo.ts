@@ -83,12 +83,9 @@ const sampleItems = [
 @Queryable()
 export class DORM extends DurableObject {
   sql: SqlStorage;
-  //   env: any;
-  // raw: Raw;
-  // exec: Exec;
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
-    // this.env = env;
+    this.env = env;
     this.sql = state.storage.sql;
   }
 }
