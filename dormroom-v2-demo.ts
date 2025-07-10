@@ -97,26 +97,23 @@ export default {
   fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
     const url = new URL(request.url);
     const firstSegment = url.pathname.split("/")[1];
+
+    if (url.pathname === "/") {
+      return new Response(
+        `usage: Items for any ID: GET /{id}, Any studio: GET /{id}/studio`,
+      );
+    }
+
     const stub = env.DORM_NAMESPACE.get(
       env.DORM_NAMESPACE.idFromName(firstSegment),
     );
-
     const configs: MultiStubConfig[] = [
       firstSegment === "aggregate"
         ? undefined
         : { name: "user:" + firstSegment },
       { name: "aggregate", config: { locationHint: "weur" } },
     ];
-
     const multistub = getMultiStub(env.DORM_NAMESPACE, configs, ctx);
-
-    if (url.pathname === "/") {
-      return new Response(`usage:
-
-- Items for any ID: GET /{id}
-- Any studio: GET /{id}/studio
-`);
-    }
 
     if (url.pathname.endsWith("/studio")) {
       // Add studio that connects to the user-db as well as the aggregate on every query!!!
