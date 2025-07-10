@@ -174,7 +174,7 @@ export type DORMClient<T extends Rpc.DurableObjectBranded> = {
     ...params: any[]
   ) => RemoteSqlStorageCursor<T>;
   /** A stub linked to both your main DO and mirror DO for executing any RPC function on both and retrieving the response only from the first */
-  stub: T;
+  stub: DurableObjectStub<T>;
   /** Middleware to expose exec to be browsable (e.g. for Outerbase) */
   middleware: (
     request: Request,
