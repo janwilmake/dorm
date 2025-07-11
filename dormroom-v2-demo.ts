@@ -88,6 +88,14 @@ export class DORM extends DurableObject {
     this.env = env;
     this.sql = state.storage.sql;
   }
+
+  anotherthing() {
+    return 1;
+  }
+
+  async fetch(request: Request) {
+    return new Response("");
+  }
 }
 
 export default {

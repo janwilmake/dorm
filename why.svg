@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="1201px" height="761px" viewBox="-0.5 -0.5 1201 761" content="&lt;mxfile host=&quot;app.diagrams.net&quot; modified=&quot;2024-01-01T00:00:00.000Z&quot; agent=&quot;5.0&quot; etag=&quot;abc123&quot; version=&quot;22.1.0&quot;&gt;&lt;diagram name=&quot;Page-1&quot; id=&quot;abc123&quot;&gt;&lt;mxGraphModel dx=&quot;1200&quot; dy=&quot;760&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; guides=&quot;1&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; page=&quot;1&quot; pageScale=&quot;1&quot; pageWidth=&quot;827&quot; pageHeight=&quot;1169&quot; math=&quot;0&quot; shadow=&quot;0&quot;&gt;&lt;root&gt;&lt;mxCell id=&quot;0&quot;/&gt;&lt;mxCell id=&quot;1&quot; parent=&quot;0&quot;/&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;">
+  <defs/>
+  <g>
+    <!-- Title -->
+    <rect x="0" y="0" width="1200" height="60" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+    <text x="600" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#212529">
+      Turso vs Durable Objects: Roundtrip Comparison
+    </text>
+    
+    <!-- Subtitle -->
+    <text x="600" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">
+      Example: User sends a chat message that needs validation, rate limiting, and persistence
+    </text>
+    
+    <!-- Turso Section -->
+    <rect x="50" y="120" width="500" height="40" fill="#dc3545" stroke="#b02a37" stroke-width="2"/>
+    <text x="300" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">
+      Turso (Serverless Database)
+    </text>
+    
+    <!-- Turso Client -->
+    <rect x="80" y="180" width="100" height="60" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+    <text x="130" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1976d2">
+      Client
+    </text>
+    <text x="130" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#1976d2">
+      (Browser/App)
+    </text>
+    
+    <!-- Turso Edge Function -->
+    <rect x="250" y="180" width="120" height="60" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
+    <text x="310" y="200" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#f57c00">
+      Edge Function
+    </text>
+    <text x="310" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">
+      (Vercel/Netlify)</text>
+    <text x="310" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#f57c00">
+      JS Runtime
+    </text>
+    
+    <!-- Turso Database -->
+    <rect x="420" y="180" width="100" height="60" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+    <text x="470" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#7b1fa2">
+      Turso DB
+    </text>
+    <text x="470" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">
+      (SQLite)
+    </text>
+    
+    <!-- Turso Arrows -->
+    <defs>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#212529"/>
+      </marker>
+    </defs>
+    
+    <!-- Step 1 -->
+    <path d="M 180 200 L 240 200" stroke="#dc3545" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="210" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#dc3545">1</text>
+    
+    <!-- Step 2 -->
+    <path d="M 370 200 L 410 200" stroke="#dc3545" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="390" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#dc3545">2</text>
+    
+    <!-- Step 3 -->
+    <path d="M 410 210 L 380 210" stroke="#dc3545" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="395" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#dc3545">3</text>
+    
+    <!-- Step 4 -->
+    <path d="M 370 220 L 410 220" stroke="#dc3545" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="390" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#dc3545">4</text>
+    
+    <!-- Step 5 -->
+    <path d="M 410 230 L 380 230" stroke="#dc3545" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="395" y="245" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#dc3545">5</text>
+    
+    <!-- Step 6 -->
+    <path d="M 240 220 L 190 220" stroke="#dc3545" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="215" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#dc3545">6</text>
+    
+    <!-- Turso Steps List -->
+    <rect x="80" y="270" width="440" height="160" fill="#fff5f5" stroke="#dc3545" stroke-width="1" stroke-dasharray="5,5"/>
+    <text x="90" y="290" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#dc3545">
+      6 Roundtrips Required:
+    </text>
+    <text x="90" y="310" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      1. Client → Edge Function (send message)
+    </text>
+    <text x="90" y="330" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      2. Edge Function → Turso (check user rate limits)
+    </text>
+    <text x="90" y="350" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      3. Turso → Edge Function (return rate limit data)
+    </text>
+    <text x="90" y="370" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      4. Edge Function → Turso (insert message + update counters)
+    </text>
+    <text x="90" y="390" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      5. Turso → Edge Function (confirm insertion)
+    </text>
+    <text x="90" y="410" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      6. Edge Function → Client (success response)
+    </text>
+    
+    <!-- Durable Objects Section -->
+    <rect x="650" y="120" width="500" height="40" fill="#198754" stroke="#146c43" stroke-width="2"/>
+    <text x="900" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">
+      Durable Objects + SQLite
+    </text>
+    
+    <!-- DO Client -->
+    <rect x="680" y="180" width="100" height="60" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+    <text x="730" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#1976d2">
+      Client
+    </text>
+    <text x="730" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#1976d2">
+      (Browser/App)
+    </text>
+    
+    <!-- DO Object -->
+    <rect x="850" y="180" width="150" height="60" fill="#e8f5e8" stroke="#198754" stroke-width="2"/>
+    <text x="925" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#198754">
+      Durable Object
+    </text>
+    <text x="925" y="210" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#198754">
+      JS Runtime + SQLite
+    </text>
+    <text x="925" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#198754">
+      (All logic in memory)
+    </text>
+    
+    <!-- DO Arrows -->
+    <path d="M 780 200 L 840 200" stroke="#198754" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="810" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#198754">1</text>
+    
+    <path d="M 840 220 L 790 220" stroke="#198754" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="815" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#198754">2</text>
+    
+    <!-- DO Steps List -->
+    <rect x="680" y="270" width="440" height="160" fill="#f0f9f0" stroke="#198754" stroke-width="1" stroke-dasharray="5,5"/>
+    <text x="690" y="290" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#198754">
+      2 Roundtrips Required:
+    </text>
+    <text x="690" y="320" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      1. Client → Durable Object (send message)
+    </text>
+    <text x="690" y="340" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      2. Durable Object → Client (success response)
+    </text>
+    <text x="690" y="370" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#198754">
+      All logic happens inside the DO:
+    </text>
+    <text x="690" y="390" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      • Rate limit checking (in-memory or local SQLite)
+    </text>
+    <text x="690" y="410" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      • Message validation and processing
+    </text>
+    <text x="690" y="430" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+      • Database operations (local SQLite)
+    </text>
+    
+    <!-- Performance Comparison -->
+    <rect x="200" y="460" width="800" height="120" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+    <text x="600" y="485" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#212529">
+      Performance Impact
+    </text>
+    
+    <rect x="220" y="500" width="160" height="60" fill="#ffeaa7" stroke="#fdcb6e" stroke-width="2"/>
+    <text x="300" y="520" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#2d3436">
+      Turso Latency
+    </text>
+    <text x="300" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#2d3436">
+      ~300-600ms
+    </text>
+    <text x="300" y="550" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#636e72">
+      (6 network hops)
+    </text>
+    
+    <rect x="820" y="500" width="160" height="60" fill="#55efc4" stroke="#00b894" stroke-width="2"/>
+    <text x="900" y="520" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#2d3436">
+      DO Latency
+    </text>
+    <text x="900" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#2d3436">
+      ~50-150ms
+    </text>
+    <text x="900" y="550" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#636e72">
+      (2 network hops)
+    </text>
+    
+    <!-- VS -->
+    <text x="600" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#e17055">
+      VS
+    </text>
+    
+    <!-- Key Insight -->
+    <rect x="100" y="610" width="1000" height="100" fill="#e8f4f8" stroke="#17a2b8" stroke-width="2"/>
+    <text x="600" y="635" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#17a2b8">
+      Key Insight
+    </text>
+    <text x="600" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#212529">
+      Durable Objects can execute complex business logic locally with SQLite, eliminating multiple
+    </text>
+    <text x="600" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#212529">
+      database roundtrips that serverless databases require for the same operations.
+    </text>
+    <text x="600" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#6c757d">
+      This results in 3-4x better latency for complex operations requiring multiple database interactions.
+    </text>
+  </g>
+</svg>
