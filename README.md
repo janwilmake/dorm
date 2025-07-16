@@ -110,7 +110,6 @@ When creating mirrors, be wary of naming collisions and database size:
 - **Direct SQL anywhere**: No need to write DO handler code - query from your worker
 - **Outerbase integration**: Explore and manage your data with built-in tools
 - **JSON Schema support**: Define tables using JSON Schema with automatic SQL translation
-- **Streaming queries**: Efficient cursor implementation for large result sets
 - **JIT Migrations**: Migrations are applied when needed, just once, right before a DO gets accessed (via `@Migratable`)
 - **Data mirroring**: Mirror operations to aggregate databases for analytics
 - **Low verbosity**: Clean API that hides Durable Object complexity
@@ -120,8 +119,7 @@ When creating mirrors, be wary of naming collisions and database size:
 ### Setting up your Durable Object with Migrations
 
 ```typescript
-import { Migratable } from "migratable-object";
-import { Streamable } from "remote-sql-cursor";
+import { Queryable, Migratable } from "dormroom";
 
 @Migratable({
   migrations: {
@@ -129,7 +127,7 @@ import { Streamable } from "remote-sql-cursor";
     2: [`ALTER TABLE users ADD COLUMN email TEXT`],
   },
 })
-@Streamable()
+@Queryable()
 export class DORM extends DurableObject {
   sql: SqlStorage;
 
@@ -162,32 +160,14 @@ const userSchema: TableSchema = {
 const sqlStatements = jsonSchemaToSql(userSchema);
 ```
 
-### Streaming Query Results
-
-```typescript
-// Get a cursor for working with large datasets
-const cursor = client.exec<UserRecord>("SELECT * FROM users");
-
-// Stream results without loading everything into memory
-for await (const user of cursor) {
-  // Process each user individually
-}
-
-// Or get all results at once
-const allUsers = await cursor.toArray();
-```
-
 ### REST API for Data Access
 
 ```typescript
 // Access your database via REST API
-const middlewareResponse = await client.middleware(request, {
-  prefix: "/api/db",
-  secret: "my-secret-key",
-});
+const studioResponse = await client.studio(request);
 
-if (middlewareResponse) {
-  return middlewareResponse;
+if (studioResponse) {
+  return studioRepsonse;
 }
 ```
 
@@ -247,7 +227,7 @@ This allows:
 - [Original idea](https://x.com/janwilmake/status/1884548509723983938) for mirroring
 - [DORM uses a 'remote sql cursor' at its core - see repo+post here](https://x.com/janwilmake/status/1920274164889354247)
 - [v1.0.0@next-25 - Breaking change - July 8, 2025](https://x.com/janwilmake/status/1942557388210368845)
-- [v1.0.0 - Breaking changes - July 16, 2025](#)
+- [v1.0.0 - Breaking changes - July 16, 2025](https://x.com/janwilmake/status/1945504977230897180)
 
 ## 🚧 Status: Beta
 

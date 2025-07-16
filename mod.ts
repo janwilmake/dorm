@@ -32,10 +32,7 @@ export type DORMClient<T extends Rpc.DurableObjectBranded & QueryableHandler> =
      *
      * NB: although it's async you can safely insert this as the async part only applies in the /query/raw endpoint
      */
-    studio: (
-      request: Request,
-      options?: StudioConfig
-    ) => Promise<Response | undefined>;
+    studio: (request: Request) => Promise<Response | undefined>;
     // Easier to get
     exec: ExecFn;
     raw: RawFn;
