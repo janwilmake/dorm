@@ -50,14 +50,14 @@ export interface RemoteSqlStorageCursor<T extends Records = Records> {
   type Records,
   // NB: package name is: "dormroom" when installing as package
 } from "./mod";
-import { Streamable } from "remote-sql-cursor";
+import { Queryable, QueryableHandler } from "queryable-object";
 import { Transfer } from "transferable-object";
 import { Migratable } from "migratable-object";
 
 // Ensure to export your DO for it to be accessible
 
 export interface Env {
-  DORM_NAMESPACE: DurableObjectNamespace<DORM>;
+  DORM_NAMESPACE: DurableObjectNamespace<DORM & QueryableHandler>;
   // Optional environment variable for database authentication
   DB_SECRET?: string;
 }
@@ -94,7 +94,7 @@ interface Todo extends Records {
     // 3: [`ALTER TABLE todos ADD COLUMN priority INTEGER DEFAULT 0`],
   },
 })
-@Streamable()
+@Queryable()
 export class DORM extends DurableObject {
   transfer = new Transfer(this);
   sql: SqlStorage;
@@ -113,7 +113,7 @@ export default {
   async fetch(
     request: Request,
     env: Env,
-    ctx: ExecutionContext,
+    ctx: ExecutionContext
   ): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -131,12 +131,12 @@ export default {
             example: "/default - for default tenant",
           },
           null,
-          2,
+          2
         ),
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
     }
 
@@ -156,7 +156,7 @@ export default {
             ];
 
       // Create a database client for the specified tenant
-      const client: DORMClient<DORM> = createClient({
+      const client = createClient({
         doNamespace: env.DORM_NAMESPACE,
         ctx: ctx, // Pass execution context for waitUntil
         configs,
@@ -164,9 +164,10 @@ export default {
 
       // Ensure tenant exists in the tenants table
       if (tenantId !== "aggregate") {
-        await client
-          .exec("INSERT OR IGNORE INTO tenants (id) VALUES (?)", tenantId)
-          .toArray();
+        await client.exec(
+          "INSERT OR IGNORE INTO tenants (id) VALUES (?)",
+          tenantId
+        );
       }
 
       // Handle database REST API access (needed for Outerbase integration)
@@ -175,7 +176,10 @@ export default {
         const middlewareResponse = await client.middleware(request, {
           prefix: `/${tenantId}/api/db`,
           // Optional authentication secret
-          secret: env.DB_SECRET || "my-secret-key", // Default to "my-secret-key" if not provided
+          basicAuth: {
+            username: "admin",
+            password: env.DB_SECRET || "my-secret-key", // Default to "my-secret-key" if not provided
+          },
         });
 
         if (middlewareResponse) {
@@ -193,48 +197,12 @@ export default {
 
       // Stream todos as a pure JSON array (for API use)
       if (subPath === "/todos") {
-        // Create a TransformStream to stream results
-        const { readable, writable } = new TransformStream();
-        const writer = writable.getWriter();
-        const encoder = new TextEncoder();
-
-        // Process in background
-        ctx.waitUntil(
-          (async () => {
-            try {
-              // NB: client.exec is sync, and returns the cursor immediately, but ensure to apply a function or iterate over the cursor, for the query to be executed.
-              const cursor = client.exec<Todo>(
-                "SELECT * FROM todos WHERE tenant_id = ? ORDER BY created_at DESC",
-                tenantId,
-              );
-
-              // Write opening JSON array bracket
-              await writer.write(encoder.encode("["));
-
-              let first = true;
-              // Stream each todo as it comes
-              for await (const todo of cursor) {
-                if (!first) await writer.write(encoder.encode(","));
-                await writer.write(encoder.encode(JSON.stringify(todo)));
-                first = false;
-              }
-
-              // Write closing JSON bracket
-              await writer.write(encoder.encode("]"));
-            } catch (error: any) {
-              console.error("Streaming error:", error);
-              // Write error info if something goes wrong mid-stream
-              await writer.write(
-                encoder.encode(`{"error":"${error.message}"}`),
-              );
-            } finally {
-              await writer.close();
-            }
-          })(),
-        );
-
         // Return the readable stream immediately
-        return new Response(readable, {
+        const { array }: { array: Todo[] } = await client.exec(
+          "SELECT * FROM todos WHERE tenant_id = ? ORDER BY created_at DESC",
+          tenantId
+        );
+        return new Response(JSON.stringify(array), {
           headers: {
             "Content-Type": "application/json",
             "Transfer-Encoding": "chunked",
@@ -250,15 +218,13 @@ export default {
       // Handle adding a new todo
       if (newTodo) {
         const id = crypto.randomUUID();
-        await client
-          .exec(
-            "INSERT INTO todos (id, text, created_at, tenant_id) VALUES (?, ?, ?, ?)",
-            id,
-            newTodo,
-            new Date().toISOString(),
-            tenantId,
-          )
-          .toArray();
+        await client.exec(
+          "INSERT INTO todos (id, text, created_at, tenant_id) VALUES (?, ?, ?, ?)",
+          id,
+          newTodo,
+          new Date().toISOString(),
+          tenantId
+        );
 
         // Redirect to clear the query parameter
         return new Response(null, {
@@ -271,13 +237,11 @@ export default {
 
       // Handle deleting a todo
       if (deleteTodo) {
-        await client
-          .exec(
-            "DELETE FROM todos WHERE id = ? AND tenant_id = ?",
-            deleteTodo,
-            tenantId,
-          )
-          .toArray();
+        await client.exec(
+          "DELETE FROM todos WHERE id = ? AND tenant_id = ?",
+          deleteTodo,
+          tenantId
+        );
 
         // Redirect to clear the query parameter
         return new Response(null, {
@@ -290,13 +254,11 @@ export default {
 
       // Handle toggling a todo's completion status
       if (toggleTodo) {
-        await client
-          .exec(
-            "UPDATE todos SET completed = CASE WHEN completed = 1 THEN 0 ELSE 1 END WHERE id = ? AND tenant_id = ?",
-            toggleTodo,
-            tenantId,
-          )
-          .toArray();
+        await client.exec(
+          "UPDATE todos SET completed = CASE WHEN completed = 1 THEN 0 ELSE 1 END WHERE id = ? AND tenant_id = ?",
+          toggleTodo,
+          tenantId
+        );
 
         // Redirect to clear the query parameter
         return new Response(null, {
@@ -308,11 +270,10 @@ export default {
       }
 
       // Get all todos for the current tenant
-      const cursor = client.exec<Todo>(
+      const { array: todos }: { array: Todo[] } = await client.exec(
         "SELECT * FROM todos WHERE tenant_id = ? ORDER BY created_at DESC",
-        tenantId,
+        tenantId
       );
-      const todos = await cursor.toArray();
 
       // Default to UI response regardless of path
       // Create HTML UI response
@@ -545,7 +506,7 @@ export default {
                       </a>
                     </div>
                   </li>
-                `,
+                `
                       )
                       .join("")
                   : `<li class="empty-state">
@@ -567,10 +528,10 @@ export default {
               <h2>Resources & Tools</h2>
               <div class="links-container">
                 <a href="${`https://studio.outerbase.com/local/new-base/starbase?url=${encodeURIComponent(
-                  new URL(`/${tenantId}/api/db`, request.url).href,
+                  new URL(`/${tenantId}/api/db`, request.url).href
                 )}&type=internal&access-key=my-secret-key`}" target="_blank">Open in Outerbase</a>
                 <a href="${`https://studio.outerbase.com/local/new-base/starbase?url=${encodeURIComponent(
-                  new URL(`/aggregate/api/db`, request.url).href,
+                  new URL(`/aggregate/api/db`, request.url).href
                 )}&type=internal&access-key=my-secret-key`}" target="_blank">Open aggregate in Outerbase</a>
               </div>
             </div>
