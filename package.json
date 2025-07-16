@@ -2,16 +2,17 @@
   "name": "dormroom",
   "version": "1.0.0",
   "files": [
-    "mod.ts"
+    "mod.ts",
+    "util.ts"
   ],
   "main": "mod.ts",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250415.0"
   },
   "dependencies": {
-    "migratable-object": "^0.0.8",
-    "multistub": "^0.0.7",
+    "migratable-object": "^0.0.12",
+    "multistub": "^0.0.8",
     "queryable-object": "^0.0.8",
-    "transferable-object": "^0.0.4"
+    "transferable-object": "^0.0.22"
   }
 }

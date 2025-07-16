@@ -144,21 +144,17 @@ export default {
       // Get tenant ID from the first segment of the path
       const tenantId = pathSegments[0];
 
-      const configs =
-        tenantId === "aggregate"
-          ? // Show the aggregate DB. Warning: Writes won't be mirrored to tenant dbs for this connection
-            [{ name: "aggregate" }]
-          : [
-              // Shard by tenant ID
-              { name: `tenant:${tenantId}` },
-              // Query execution mirroring to a central aggregate database.
-              { name: "aggregate" },
-            ];
+      const configs = [
+        // Shard by tenant ID unless 'aggregate'
+        tenantId === "aggregate" ? undefined : { name: `tenant:${tenantId}` },
+        // Show the aggregate DB.
+        { name: "aggregate" },
+      ];
 
       // Create a database client for the specified tenant
       const client = createClient({
         doNamespace: env.DORM_NAMESPACE,
-        ctx: ctx, // Pass execution context for waitUntil
+        ctx,
         configs,
       });
 
