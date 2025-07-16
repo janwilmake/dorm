@@ -75,7 +75,7 @@ const sampleItems = [
 
       ...sampleItems.map(
         ({ category, description, name, price }) =>
-          `INSERT INTO items (name, description, price, category) VALUES ('${name}', '${description}', '${price}', '${category}')`,
+          `INSERT INTO items (name, description, price, category) VALUES ('${name}', '${description}', '${price}', '${category}')`
       ),
     ],
   },
@@ -105,12 +105,12 @@ export default {
 
     if (url.pathname === "/") {
       return new Response(
-        `usage: Items for any ID: GET /{id}, Any studio: GET /{id}/studio`,
+        `usage: Items for any ID: GET /{id}, Any studio: GET /{id}/studio`
       );
     }
 
     const stub = env.DORM_NAMESPACE.get(
-      env.DORM_NAMESPACE.idFromName(firstSegment),
+      env.DORM_NAMESPACE.idFromName(firstSegment)
     );
     const configs: MultiStubConfig[] = [
       firstSegment === "aggregate"

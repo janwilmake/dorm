@@ -173,8 +173,7 @@ export default {
       // Handle database REST API access (needed for Outerbase integration)
       // Explore your database by adding it in the studio at: https://studio.outerbase.com/local/new-base/starbase?url=https://dorm.username.workers.dev/default/api/db&type=internal&access-key=my-secret-key
       if (path.startsWith(`/${tenantId}/api/db`)) {
-        const middlewareResponse = await client.middleware(request, {
-          prefix: `/${tenantId}/api/db`,
+        const middlewareResponse = await client.studio(request, {
           // Optional authentication secret
           basicAuth: {
             username: "admin",

@@ -7,6 +7,7 @@ import {
   StudioOptions,
   QueryableObject,
   GetSchemaFn,
+  QueryableHandler,
 } from "queryable-object";
 import { getMultiStub, MultiStubConfig, getStubs } from "multistub";
 // Re-export useful features
@@ -22,30 +23,31 @@ export interface StudioConfig extends StudioOptions {
   pathname?: string;
 }
 
-export type DORMClient<T extends Rpc.DurableObjectBranded & QueryableObject> = {
-  /** A stub linked to both your main DO and mirror DO for executing any RPC function on both and retrieving the response only from the first */
-  stub: DurableObjectStub<T>;
-  /**
-   * Middleware to expose exec to be browsable using outerbase
-   *
-   * NB: although it's async you can safely insert this as the async part only applies in the /query/raw endpoint
-   */
-  studio: (
-    request: Request,
-    options?: StudioConfig
-  ) => Promise<Response | undefined>;
-  // Easier to get
-  exec: ExecFn;
-  raw: RawFn;
-  getSchema: GetSchemaFn;
-};
+export type DORMClient<T extends Rpc.DurableObjectBranded & QueryableHandler> =
+  {
+    /** A stub linked to both your main DO and mirror DO for executing any RPC function on both and retrieving the response only from the first */
+    stub: DurableObjectStub<T>;
+    /**
+     * Middleware to expose exec to be browsable using outerbase
+     *
+     * NB: although it's async you can safely insert this as the async part only applies in the /query/raw endpoint
+     */
+    studio: (
+      request: Request,
+      options?: StudioConfig
+    ) => Promise<Response | undefined>;
+    // Easier to get
+    exec: ExecFn;
+    raw: RawFn;
+    getSchema: GetSchemaFn;
+  };
 
 /**
  * Creates a client for interacting with DORM
  * This is now an async function that initializes storage upfront
  */
 export function createClient<
-  T extends Rpc.DurableObjectBranded & QueryableObject
+  T extends Rpc.DurableObjectBranded & QueryableHandler
 >(context: {
   doNamespace: DurableObjectNamespace<T>;
   ctx: ExecutionContext;
