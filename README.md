@@ -11,7 +11,7 @@ DORM makes building multi-tenant applications on Cloudflare **ridiculously easy*
 
 Perfect for SaaS applications, user profiles, rate limiting, or any case where you need isolated data stores that are **lightning fast** at the edge.
 
-[Demo app: https://dorm.wilmake.com](https://dorm.wilmake.com) | [Give me a like/share on X](https://x.com/janwilmake/status/1921932074581168337)
+[Demo app: https://dorm.wilmake.com](https://dorm.wilmake.com) | [Announcement post](https://x.com/janwilmake/status/1921932074581168337) | [v1 announcement post](https://x.com/janwilmake/status/1945504977230897180)
 
 ## ⚡ Key Benefits vs Alternatives
 
@@ -32,7 +32,7 @@ See [Turso vs DORM](turso-vs-dorm.md) and [DORM vs D1](dorm-vs-d1.md) for a more
 Check out the [live demo](https://dorm.wilmake.com) showing multi-tenant capabilities.
 
 ```bash
-npm i dormroom@next
+npm i dormroom
 ```
 
 DORM is built atop of modular primitives called 'Power Objects'. Check https://itscooldo.com for more information!
@@ -247,6 +247,7 @@ This allows:
 - [Original idea](https://x.com/janwilmake/status/1884548509723983938) for mirroring
 - [DORM uses a 'remote sql cursor' at its core - see repo+post here](https://x.com/janwilmake/status/1920274164889354247)
 - [v1.0.0@next-25 - Breaking change - July 8, 2025](https://x.com/janwilmake/status/1942557388210368845)
+- [v1.0.0 - Breaking changes - July 16, 2025](#)
 
 ## 🚧 Status: Beta
 
