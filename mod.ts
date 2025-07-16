@@ -9,7 +9,7 @@ import {
   GetSchemaFn,
   QueryableHandler,
 } from "queryable-object";
-import { getMultiStub, MultiStubConfig, getStubs } from "multistub";
+import { getMultiStub, MultiStubConfig } from "multistub";
 // Re-export useful features
 export * from "multistub";
 export * from "migratable-object";
